@@ -1,46 +1,38 @@
 <?php
 
-namespace App\Models;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Support\Facades\Hash;
-
-class User extends Authenticatable
+return new class extends Migration
 {
-    use HasFactory, Notifiable, HasUuids;
-
-    protected $keyType = 'string';
-    public $incrementing = false;
-
-    protected $fillable = [
-        'nom',
-        'prenom',
-        'type_piece',
-        'numero',
-        'adresse',
-        'code', // utilisé comme mot de passe
-        'telephone',
-        'email',
-        'email_verified_at',
-    ];
-
-    protected $hidden = [
-        'code', // masqué dans les réponses JSON
-        'remember_token',
-    ];
-
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-    ];
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->string('nom');
+            $table->string('prenom');
+            $table->enum('type_piece', ['cni', 'passport', 'permis']);
+            $table->string('numero')->unique();
+            $table->string('adresse');
+            $table->string('code'); // utilisé comme mot de passe
+            $table->string('telephone')->unique();
+            $table->string('email')->unique()->nullable();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+        });
+    }
 
     /**
-     * Mutateur pour hasher automatiquement le champ "code"
+     * Reverse the migrations.
      */
-    public function setCodeAttribute($value)
+    public function down(): void
     {
-        $this->attributes['code'] = Hash::make($value);
+        Schema::dropIfExists('users');
     }
-}
+};

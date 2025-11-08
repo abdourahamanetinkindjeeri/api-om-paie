@@ -33,8 +33,8 @@ class AuthController extends Controller
             return response()->json(['message' => 'Identifiants invalides'], 401);
         }
 
-        // Ici $tokenData['access_token'] est ton token Passport
-        return new AuthResource(auth()->user(), $tokenData['access_token']);
+        // Retourner l'utilisateur et le token
+        return new AuthResource($tokenData['user'], $tokenData['access_token']);
     }
 
     /**

@@ -28,6 +28,7 @@ class AuthService
         // Création du token Passport
         $tokenResult = $user->createToken('auth_token');
         return [
+            'user' => $user,
             'access_token' => $tokenResult->accessToken,
             'token_type'   => 'Bearer',
             'expires_at'   => $tokenResult->token->expires_at,
