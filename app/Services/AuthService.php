@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Repositories\UserRepository;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class AuthService
 {
@@ -12,8 +12,7 @@ class AuthService
 
     public function register(array $data): User
     {
-        // Hash automatique du champ "code"
-        $data['code'] = Hash::make($data['code']);
+        // Pas besoin de Hash::make ici, le mutateur User::setCodeAttribute s’en charge
         return $this->users->create($data);
     }
 
@@ -21,17 +20,50 @@ class AuthService
     {
         $user = $this->users->findByTelephone($telephone);
 
-        if (!$user || !Hash::check($password, $user->code)) {
+        if (!$user) {
             return null;
         }
 
-        // Création du token Passport
+        // Vérifier si le compte est bloqué
+        if ($user->isBlocked()) {
+            return $this->blockedResponse($user, 'Compte bloqué temporairement');
+        }
+
+        // Vérifier le code PIN
+        if (!Hash::check($password, $user->code)) {
+            $user->incrementLoginAttempts();
+
+            if ($user->isBlocked()) {
+                return $this->blockedResponse($user, 'Compte bloqué après ' . User::MAX_LOGIN_ATTEMPTS . ' tentatives incorrectes');
+            }
+
+            return [
+                'error' => 'invalid_credentials',
+                'message' => 'Code incorrect',
+                'attempts_remaining' => $user->remainingAttempts(),
+            ];
+        }
+
+        // Connexion réussie
+        $user->resetLoginAttempts();
+
         $tokenResult = $user->createToken('auth_token');
+
         return [
-            'user' => $user,
+            'user'         => $user,
             'access_token' => $tokenResult->accessToken,
             'token_type'   => 'Bearer',
             'expires_at'   => $tokenResult->token->expires_at,
+        ];
+    }
+
+    private function blockedResponse(User $user, string $message): array
+    {
+        return [
+            'error'             => 'account_blocked',
+            'message'           => $message,
+            'blocked_until'     => $user->blocked_until,
+            'remaining_minutes' => $user->getBlockedTimeRemaining(),
         ];
     }
 }

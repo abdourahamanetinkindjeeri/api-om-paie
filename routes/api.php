@@ -24,10 +24,13 @@ Route::prefix('auth')->group(function () {
     // Connexion
     Route::post('/login', [AuthController::class, 'login']);
 
+    // Débloquer un compte (pour les tests/admin)
+    Route::post('/unlock-account', [AuthController::class, 'unlockAccount']);
+
     // Déconnexion (protégée par Passport)
     Route::middleware('auth:api')->post('/logout', [AuthController::class, 'logout']);
 
-    // Exemple : récupérer l’utilisateur connecté
+    // Exemple : récupérer l'utilisateur connecté
     Route::middleware('auth:api')->get('/me', function () {
         return auth()->user();
     });
