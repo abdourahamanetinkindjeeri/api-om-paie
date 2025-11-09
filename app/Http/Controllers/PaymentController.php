@@ -19,7 +19,51 @@ class PaymentController extends Controller
     }
 
     /**
-     * Effectuer un paiement vers un marchand
+     * @OA\Post(
+     *     path="/payment",
+     *     summary="Effectuer un paiement marchand",
+     *     description="Effectue un paiement de l'utilisateur vers un marchand",
+     *     operationId="payMerchant",
+     *     tags={"Payment"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"code_marchand", "montant"},
+     *             @OA\Property(property="code_marchand", type="string", example="SND001", description="Code unique du marchand"),
+     *             @OA\Property(property="montant", type="number", format="float", example=2500, description="Montant à payer en FCFA"),
+     *             @OA\Property(property="description", type="string", example="Achat produits alimentaires", description="Description optionnelle du paiement"),
+     *             @OA\Property(property="reference_externe", type="string", example="REF-2024-001", description="Référence externe optionnelle")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paiement effectué avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="string"),
+     *                 @OA\Property(property="montant", type="number"),
+     *                 @OA\Property(property="marchand", type="object"),
+     *                 @OA\Property(property="status", type="string"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur lors du paiement",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié"
+     *     )
+     * )
      */
     public function payMerchant(PaymentRequest $request): JsonResponse
     {

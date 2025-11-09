@@ -19,7 +19,54 @@ class TransferController extends Controller
     }
 
     /**
-     * Effectuer un transfert
+     * @OA\Post(
+     *     path="/transfer",
+     *     summary="Effectuer un transfert d'argent",
+     *     description="Transfère de l'argent du compte de l'utilisateur connecté vers un autre utilisateur",
+     *     operationId="transfer",
+     *     tags={"Transfer"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"telephone", "montant"},
+     *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Numéro du destinataire"),
+     *             @OA\Property(property="montant", type="number", format="float", example=5000, description="Montant à transférer en FCFA")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transfert effectué avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="string"),
+     *                 @OA\Property(property="montant", type="number"),
+     *                 @OA\Property(property="expediteur", type="string"),
+     *                 @OA\Property(property="destinataire", type="string"),
+     *                 @OA\Property(property="status", type="string"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur lors du transfert",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
      */
     public function transfer(TransferRequest $request): JsonResponse
     {
@@ -55,7 +102,38 @@ class TransferController extends Controller
     }
 
     /**
-     * Vérifier si un numéro existe
+     * @OA\Post(
+     *     path="/transfer/check-number",
+     *     summary="Vérifier l'existence d'un numéro",
+     *     description="Vérifie si un numéro de téléphone est enregistré dans le système",
+     *     operationId="checkNumber",
+     *     tags={"Transfer"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"numero"},
+     *             @OA\Property(property="numero", type="string", example="+221771234567")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Vérification effectuée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="exists", type="boolean"),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur de validation",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
      */
     public function checkNumber(Request $request): JsonResponse
     {
@@ -80,7 +158,39 @@ class TransferController extends Controller
     }
 
     /**
-     * Obtenir le solde de l'utilisateur authentifié
+     * @OA\Get(
+     *     path="/transfer/balance",
+     *     summary="Obtenir le solde utilisateur",
+     *     description="Récupère le solde du portefeuille de l'utilisateur connecté",
+     *     operationId="getBalance",
+     *     tags={"Transfer"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Solde récupéré avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="solde", type="number", format="float", example=25000),
+     *             @OA\Property(property="numero", type="string", example="+221771234567")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur lors de la récupération du solde",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
      */
     public function getBalance(): JsonResponse
     {
@@ -117,7 +227,52 @@ class TransferController extends Controller
     }
 
     /**
-     * Obtenir l'historique des transferts
+     * @OA\Get(
+     *     path="/transfer/history",
+     *     summary="Obtenir l'historique des transferts",
+     *     description="Récupère l'historique des transferts (envoyés et reçus) de l'utilisateur connecté",
+     *     operationId="getTransferHistory",
+     *     tags={"Transfer"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Numéro de page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Nombre d'éléments par page",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=10)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Historique récupéré avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="transactions", type="array",
+     *                     @OA\Items(type="object",
+     *                         @OA\Property(property="id", type="string"),
+     *                         @OA\Property(property="montant", type="number"),
+     *                         @OA\Property(property="type", type="string"),
+     *                         @OA\Property(property="status", type="string"),
+     *                         @OA\Property(property="created_at", type="string", format="date-time")
+     *                     )
+     *                 ),
+     *                 @OA\Property(property="pagination", type="object")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié"
+     *     )
+     * )
      */
     public function getTransferHistory(Request $request): JsonResponse
     {

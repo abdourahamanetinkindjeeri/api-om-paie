@@ -1,0 +1,343 @@
+{
+    "info": {
+        "name": "OM-Paie API v2.0.0",
+        "description": "Collection Postman pour l'API OM-Paie avec MongoDB",
+        "version": "2.0.0",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8001/api",
+            "type": "string"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"nom\": \"Diop\",\n  \"prenom\": \"Mamadou\",\n  \"telephone\": \"+221771234567\",\n  \"code\": \"1234\",\n  \"code_confirmation\": \"1234\",\n  \"email\": \"mamadou@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/register",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "register"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const response = pm.response.json();",
+                                    "    pm.collectionVariables.set('access_token', response.data.access_token);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"telephone\": \"+221771234567\",\n  \"code\": \"1234\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "login"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Me",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/auth/me",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "me"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "logout"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Unlock Account",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"telephone\": \"+221771234567\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/unlock-account",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "unlock-account"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Transfer",
+            "item": [
+                {
+                    "name": "Make Transfer",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"telephone\": \"+221781234567\",\n  \"montant\": 5000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/transfer",
+                            "host": ["{{base_url}}"],
+                            "path": ["transfer"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Check Number",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"numero\": \"+221781234567\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/transfer/check-number",
+                            "host": ["{{base_url}}"],
+                            "path": ["transfer", "check-number"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Balance",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/transfer/balance",
+                            "host": ["{{base_url}}"],
+                            "path": ["transfer", "balance"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Transfer History",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/transfer/history?page=1&limit=10",
+                            "host": ["{{base_url}}"],
+                            "path": ["transfer", "history"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Payment",
+            "item": [
+                {
+                    "name": "Pay Merchant",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code_marchand\": \"SND001\",\n  \"montant\": 2500,\n  \"description\": \"Achat produits alimentaires\",\n  \"reference_externe\": \"REF-2024-001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/payment",
+                            "host": ["{{base_url}}"],
+                            "path": ["payment"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Check Merchant",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code_marchand\": \"SND001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/payment/check-merchant",
+                            "host": ["{{base_url}}"],
+                            "path": ["payment", "check-merchant"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Merchant Info",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code_marchand\": \"SND001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/payment/merchant-info",
+                            "host": ["{{base_url}}"],
+                            "path": ["payment", "merchant-info"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Payment History",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/payment/history?page=1&limit=10",
+                            "host": ["{{base_url}}"],
+                            "path": ["payment", "history"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Merchant History",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"code_marchand\": \"SND001\",\n  \"page\": 1,\n  \"limit\": 10\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/payment/merchant-history",
+                            "host": ["{{base_url}}"],
+                            "path": ["payment", "merchant-history"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

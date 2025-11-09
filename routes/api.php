@@ -32,10 +32,8 @@ Route::prefix('auth')->group(function () {
     // Déconnexion (protégée par Passport)
     Route::middleware('auth:api')->post('/logout', [AuthController::class, 'logout']);
 
-    // Exemple : récupérer l'utilisateur connecté
-    Route::middleware('auth:api')->get('/me', function () {
-        return auth()->user();
-    });
+    // Récupérer l'utilisateur connecté
+    Route::middleware('auth:api')->get('/me', [AuthController::class, 'me']);
 });
 
 // Routes pour les transferts (protégées par authentification)

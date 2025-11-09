@@ -13,7 +13,7 @@ class TransactionLogSeeder extends Seeder
     public function run(): void
     {
         echo "🚀 Création des logs de transactions...\n";
-        
+
         $transactions = Transaction::all();
         $logCount = 0;
 
