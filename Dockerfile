@@ -9,7 +9,8 @@ WORKDIR /app
 COPY composer.json composer.lock /app/
 
 # Installer les dépendances sans exécuter les scripts artisan
-RUN composer install --no-scripts --optimize-autoloader --no-interaction --prefer-dist
+# Ignorer temporairement l'extension mongodb car elle sera installée dans l'étape finale
+RUN composer install --no-scripts --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=ext-mongodb
 
 # Copier le reste du code source
 COPY . .
