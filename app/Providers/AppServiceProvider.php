@@ -16,6 +16,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Contracts\TransferServiceInterface::class,
             \App\Services\TransferService::class
         );
+
+        // Enregistrement du service de paiement
+        $this->app->bind(
+            \App\Services\Contracts\PaymentServiceInterface::class,
+            \App\Services\PaymentService::class
+        );
     }
 
     /**
