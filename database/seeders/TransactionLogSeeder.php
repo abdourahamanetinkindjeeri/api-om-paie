@@ -12,71 +12,70 @@ class TransactionLogSeeder extends Seeder
      */
     public function run(): void
     {
+        echo "🚀 Création des logs de transactions...\n";
+        
         $transactions = Transaction::all();
+        $logCount = 0;
 
         foreach ($transactions as $transaction) {
-            // Chaque transaction a au minimum un log de création
-            TransactionLog::factory()->created()->create([
-                'transaction_id' => $transaction->id
+            // Log de création pour chaque transaction
+            TransactionLog::create([
+                'transaction_id' => $transaction->id,
+                'action' => 'created',
+                'description' => 'Transaction créée'
             ]);
+            $logCount++;
 
             // Logs selon le statut de la transaction
             switch ($transaction->status) {
                 case 'completed':
-                    // Transaction réussie : created -> processing -> completed
-                    TransactionLog::factory()->create([
+                    TransactionLog::create([
                         'transaction_id' => $transaction->id,
                         'action' => 'processing',
                         'description' => 'Transaction en cours de traitement'
                     ]);
-
-                    TransactionLog::factory()->completed()->create([
-                        'transaction_id' => $transaction->id
+                    TransactionLog::create([
+                        'transaction_id' => $transaction->id,
+                        'action' => 'completed',
+                        'description' => 'Transaction terminée avec succès'
                     ]);
+                    $logCount += 2;
                     break;
 
                 case 'failed':
-                    // Transaction échouée : created -> processing -> failed
-                    TransactionLog::factory()->create([
+                    TransactionLog::create([
                         'transaction_id' => $transaction->id,
                         'action' => 'processing',
                         'description' => 'Tentative de traitement'
                     ]);
-
-                    TransactionLog::factory()->failed()->create([
-                        'transaction_id' => $transaction->id
+                    TransactionLog::create([
+                        'transaction_id' => $transaction->id,
+                        'action' => 'failed',
+                        'description' => 'Échec de la transaction'
                     ]);
+                    $logCount += 2;
                     break;
 
                 case 'pending':
-                    // Transaction en attente : created -> validated
-                    TransactionLog::factory()->create([
+                    TransactionLog::create([
                         'transaction_id' => $transaction->id,
                         'action' => 'validated',
                         'description' => 'Transaction validée - en attente de traitement'
                     ]);
+                    $logCount++;
                     break;
 
                 case 'cancelled':
-                    // Transaction annulée
-                    TransactionLog::factory()->create([
+                    TransactionLog::create([
                         'transaction_id' => $transaction->id,
                         'action' => 'cancelled',
                         'description' => 'Transaction annulée par l\'utilisateur'
                     ]);
+                    $logCount++;
                     break;
-            }
-
-            // 20% de chance d'avoir des logs supplémentaires
-            if (rand(1, 100) <= 20) {
-                TransactionLog::factory()->create([
-                    'transaction_id' => $transaction->id,
-                    'action' => 'system_check',
-                    'description' => 'Vérification automatique du système'
-                ]);
             }
         }
 
-        $this->command->info('✅ ' . TransactionLog::count() . ' logs de transactions créés');
+        $this->command->info('✅ ' . $logCount . ' logs de transactions créés');
     }
 }

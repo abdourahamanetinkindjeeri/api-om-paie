@@ -4,20 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Passport\HasApiTokens;
+use Illuminate\Auth\Authenticatable;
 
-class User extends Authenticatable
+class User extends Model
 {
-    use HasFactory, Notifiable, HasUuids, HasApiTokens;
+    use HasFactory, Notifiable, HasUuids, HasApiTokens, Authenticatable;
 
     public const MAX_LOGIN_ATTEMPTS = 3;
     public const BLOCK_DURATION_MINUTES = 30;
 
     protected $keyType = 'string';
     public $incrementing = false;
+
+    // Use the mongodb connection
+    protected $connection = 'mongodb';
+    protected $collection = 'users';
 
     protected $fillable = [
         'nom',

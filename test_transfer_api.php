@@ -1,9 +1,13 @@
 <?php
 
-// Script de test pour l'API de transfert
+// Script de test pour l'API de transfert avec MongoDB
 // Exécuter avec : php test_transfer_api.php
 
 require_once 'vendor/autoload.php';
+
+// Configuration pour Laravel sans Artisan
+$app = require_once 'bootstrap/app.php';
+$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 use App\Models\User;
 use App\Services\TransferService;

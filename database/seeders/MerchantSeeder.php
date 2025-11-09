@@ -12,39 +12,50 @@ class MerchantSeeder extends Seeder
      */
     public function run(): void
     {
-        // Marchands actifs principaux
-        Merchant::factory()->active()->count(20)->create();
+        echo "🚀 Création des marchands...\n";
 
-        // Grandes entreprises
-        Merchant::factory()->enterprise()->count(5)->create();
+        // Créer quelques marchands manuellement pour tester
+        $merchants = [
+            [
+                'name' => 'Boutique Sandaga - Test',
+                'code' => 'SND001',
+                'telephone' => '+221338901234',
+                'email' => 'sandaga@test.sn',
+                'status' => 'active'
+            ],
+            [
+                'name' => 'Pharmacie Plateau',
+                'code' => 'PHA001',
+                'telephone' => '+221775432100',
+                'email' => 'pharmacie.plateau@om-paie.sn',
+                'status' => 'active'
+            ],
+            [
+                'name' => 'Auchan Sénégal',
+                'code' => 'AUC001',
+                'telephone' => '+221338889999',
+                'email' => 'auchan@senegal.sn',
+                'status' => 'active'
+            ],
+            [
+                'name' => 'Restaurant Teranga',
+                'code' => 'RES001',
+                'telephone' => '+221776543210',
+                'email' => 'teranga@restaurant.sn',
+                'status' => 'active'
+            ],
+            [
+                'name' => 'Cyber Café Digital',
+                'code' => 'CYB001',
+                'telephone' => '+221781234567',
+                'email' => null,
+                'status' => 'inactive'
+            ]
+        ];
 
-        // Marchands en attente de validation
-        Merchant::factory()->inactive()->count(8)->create();
-
-        // Marchands inactifs
-        Merchant::factory()->inactive()->count(3)->create();
-
-        // Marchands de test spécifiques
-        Merchant::factory()->active()->create([
-            'name' => 'Boutique Sandaga - Test',
-            'code' => 'SND001',
-            'telephone' => '+221338901234',
-            'email' => 'sandaga@test.sn'
-        ]);
-
-        Merchant::factory()->active()->create([
-            'name' => 'Pharmacie Plateau',
-            'code' => 'PHA001',
-            'telephone' => '+221775432100',
-            'email' => 'pharmacie.plateau@om-paie.sn'
-        ]);
-
-        Merchant::factory()->enterprise()->create([
-            'name' => 'Auchan Sénégal',
-            'code' => 'AUC001',
-            'telephone' => '+221338889999',
-            'email' => 'auchan@senegal.sn'
-        ]);
+        foreach ($merchants as $merchantData) {
+            Merchant::create($merchantData);
+        }
 
         $this->command->info('✅ ' . Merchant::count() . ' marchands créés avec succès');
     }

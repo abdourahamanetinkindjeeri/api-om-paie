@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 
 class Wallet extends Model
 {
@@ -12,6 +12,10 @@ class Wallet extends Model
 
     protected $keyType = 'string';
     public $incrementing = false;
+
+    // MongoDB connection
+    protected $connection = 'mongodb';
+    protected $collection = 'wallets';
 
     protected $fillable = ['user_id', 'merchant_id', 'balance', 'currency'];
 
