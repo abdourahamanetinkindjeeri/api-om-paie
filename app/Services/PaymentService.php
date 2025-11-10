@@ -6,6 +6,7 @@ use App\Repositories\PaymentRepository;
 use App\Services\Contracts\PaymentServiceInterface;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Exception;
 
 class PaymentService extends BaseService implements PaymentServiceInterface
@@ -19,82 +20,72 @@ class PaymentService extends BaseService implements PaymentServiceInterface
     }
 
     /**
-     * Effectuer un paiement vers un marchand
+     * Effectuer un paiement vers un marchand avec transactions pour cohérence
      */
-    public function payMerchant($user, string $merchantCode, float $amount, array $metadata = []): array
+    public function payMerchant(object $user, string $merchantCode, float $amount, array $metadata = []): array
     {
-        // Remplacer DB::transaction par une gestion manuelle pour MongoDB standalone
+        if ($amount <= 0) {
+            throw new Exception('Le montant doit être supérieur à 0');
+        }
+
+        // Récupération marchand et wallets
+        $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
+        if (!$merchant) {
+            throw new Exception('Code marchand invalide ou marchand inactif');
+        }
+
+        $userWallet = $user->wallet;
+        $merchantWallet = $this->paymentRepository->getMerchantWallet($merchant->id);
+
+        if (!$userWallet || !$merchantWallet) {
+            throw new Exception('Wallet utilisateur ou marchand introuvable');
+        }
+
+        // Vérification solde
+        if ($userWallet->balance < $amount) {
+            throw new Exception('Solde insuffisant');
+        }
+
+        if (($merchantWallet->balance + $amount) > 2000000) {
+            throw new Exception('Le marchand dépasserait la limite maximum de 2,000,000 FCFA');
+        }
+
+        // Générer références uniques
+        $paymentRef = 'PAY_' . Str::uuid();
+        $debitRef = 'DEB_' . Str::uuid();
+        $creditRef = 'CRD_' . Str::uuid();
+
+        $defaultMeta = [
+            'user_phone' => $user->telephone,
+            'merchant_code' => $merchantCode,
+            'merchant_name' => $merchant->name,
+            'payment_reference' => $paymentRef
+        ];
+
+        $fullMeta = array_merge($defaultMeta, $metadata);
+
         try {
-            // Validation du montant
-            if ($amount <= 0) {
-                throw new Exception('Le montant doit être supérieur à 0');
-            }
-
-            // Trouver le marchand
-            $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
-            if (!$merchant) {
-                throw new Exception('Code marchand invalide ou marchand inactif');
-            }
-
-            // Obtenir les wallets
-            $userWallet = $user->wallet;
-            $merchantWallet = $this->paymentRepository->getMerchantWallet($merchant->id);
-
-            if (!$userWallet) {
-                throw new Exception('Wallet de l\'utilisateur non trouvé');
-            }
-
-            if (!$merchantWallet) {
-                throw new Exception('Wallet du marchand non trouvé');
-            }
-
-            // Vérifier le solde suffisant
-            if ($userWallet->balance < $amount) {
-                throw new Exception('Solde insuffisant');
-            }
-
-            // Générer des références uniques
-            $paymentRef = 'PAY_' . Str::uuid();
-            $debitRef = 'DEB_' . Str::uuid();
-            $creditRef = 'CRD_' . Str::uuid();
-
-            // Métadonnées par défaut
-            $defaultMeta = [
-                'user_phone' => $user->telephone,
-                'merchant_code' => $merchantCode,
-                'merchant_name' => $merchant->name,
-                'payment_reference' => $paymentRef
-            ];
-
-            $fullMeta = array_merge($defaultMeta, $metadata);
-
-            // Créer la transaction de débit (utilisateur)
+            // Créer transaction débit
             $debitTransaction = $this->paymentRepository->createPaymentTransaction([
                 'wallet_id' => $userWallet->id,
                 'type' => 'payment',
-                'amount' => -$amount, // Montant négatif pour le débit
+                'amount' => -$amount,
                 'status' => 'success',
                 'reference' => $debitRef,
-                'meta' => array_merge($fullMeta, [
-                    'transaction_type' => 'debit',
-                    'direction' => 'out'
-                ])
+                'meta' => array_merge($fullMeta, ['transaction_type' => 'debit', 'direction' => 'out'])
             ]);
 
-            // Créer la transaction de crédit (marchand)
+            // Créer transaction crédit
             $creditTransaction = $this->paymentRepository->createPaymentTransaction([
                 'wallet_id' => $merchantWallet->id,
                 'type' => 'payment',
-                'amount' => $amount, // Montant positif pour le crédit
+                'amount' => $amount,
                 'status' => 'success',
                 'reference' => $creditRef,
-                'meta' => array_merge($fullMeta, [
-                    'transaction_type' => 'credit',
-                    'direction' => 'in'
-                ])
+                'meta' => array_merge($fullMeta, ['transaction_type' => 'credit', 'direction' => 'in'])
             ]);
 
-            // Mettre à jour les soldes
+            // Mise à jour balances
             $newUserBalance = $userWallet->balance - $amount;
             $newMerchantBalance = $merchantWallet->balance + $amount;
 
@@ -110,39 +101,29 @@ class PaymentService extends BaseService implements PaymentServiceInterface
                     'new_balance' => $newUserBalance
                 ],
                 'merchant' => [
-                    'code' => $merchantCode,
+                    'code' => $merchant->code,
                     'name' => $merchant->name,
                     'new_balance' => $newMerchantBalance
                 ],
                 'amount' => $amount,
                 'debit_transaction' => $debitTransaction,
                 'credit_transaction' => $creditTransaction,
-                'metadata' => $metadata
+                'metadata' => $fullMeta
             ];
         } catch (Exception $e) {
-            // En cas d'erreur, relancer l'exception
-            throw $e;
+            throw new Exception('Erreur lors du traitement du paiement : ' . $e->getMessage());
         }
     }
 
-    /**
-     * Vérifier si un code marchand existe
-     */
     public function checkMerchantExists(string $merchantCode): bool
     {
         return $this->paymentRepository->findMerchantByCode($merchantCode) !== null;
     }
 
-    /**
-     * Obtenir les informations d'un marchand
-     */
     public function getMerchantInfo(string $merchantCode): ?array
     {
         $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
-
-        if (!$merchant) {
-            return null;
-        }
+        if (!$merchant) return null;
 
         $wallet = $this->paymentRepository->getMerchantWallet($merchant->id);
 
@@ -156,31 +137,19 @@ class PaymentService extends BaseService implements PaymentServiceInterface
         ];
     }
 
-    /**
-     * Obtenir l'historique des paiements d'un utilisateur
-     */
-    public function getUserPaymentHistory(string $userPhone, int $page = 1, int $limit = 10): array
+    public function getUserPaymentHistory(string $userPhone, int $page = 1, int $limit = 10): LengthAwarePaginator
     {
         $user = $this->paymentRepository->findUserByPhone($userPhone);
-        if (!$user) {
-            throw new Exception('Utilisateur non trouvé');
-        }
+        if (!$user) throw new Exception('Utilisateur non trouvé');
 
-        $result = $this->paymentRepository->getUserPaymentHistory($user->id, $page, $limit);
-        return $result->toArray();
+        return $this->paymentRepository->getUserPaymentHistory($user->id, $page, $limit);
     }
 
-    /**
-     * Obtenir l'historique des paiements reçus par un marchand
-     */
-    public function getMerchantPaymentHistory(string $merchantCode, int $page = 1, int $limit = 10): array
+    public function getMerchantPaymentHistory(string $merchantCode, int $page = 1, int $limit = 10): LengthAwarePaginator
     {
         $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
-        if (!$merchant) {
-            throw new Exception('Marchand non trouvé');
-        }
+        if (!$merchant) throw new Exception('Marchand non trouvé');
 
-        $result = $this->paymentRepository->getMerchantPaymentHistory($merchant->id, $page, $limit);
-        return $result->items();
+        return $this->paymentRepository->getMerchantPaymentHistory($merchant->id, $page, $limit);
     }
 }

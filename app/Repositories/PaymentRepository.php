@@ -6,7 +6,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Merchant;
 use App\Models\Wallet;
-use Illuminate\Database\Eloquent\Model;
 
 class PaymentRepository extends BaseRepository
 {
@@ -20,7 +19,6 @@ class PaymentRepository extends BaseRepository
      */
     public function findUserByPhone(string $telephone): ?User
     {
-        // Recherche avec ou sans le préfixe +221
         return User::where('telephone', $telephone)
             ->orWhere('telephone', '+221' . $telephone)
             ->orWhere('telephone', str_replace('+221', '', $telephone))
@@ -28,15 +26,17 @@ class PaymentRepository extends BaseRepository
     }
 
     /**
-     * Trouver un marchand par son code
+     * Trouver un marchand actif par son code
      */
     public function findMerchantByCode(string $code): ?Merchant
     {
-        return Merchant::where('code', $code)->where('status', 'active')->first();
+        return Merchant::where('code', $code)
+            ->where('status', 'active')
+            ->first();
     }
 
     /**
-     * Obtenir le wallet d'un utilisateur
+     * Obtenir le wallet d’un utilisateur
      */
     public function getUserWallet(string $userId): ?Wallet
     {
@@ -44,7 +44,7 @@ class PaymentRepository extends BaseRepository
     }
 
     /**
-     * Obtenir le wallet d'un marchand
+     * Obtenir le wallet d’un marchand
      */
     public function getMerchantWallet(string $merchantId): ?Wallet
     {
@@ -67,46 +67,39 @@ class PaymentRepository extends BaseRepository
     }
 
     /**
-     * Mettre à jour le solde d'un wallet
+     * Mettre à jour le solde d’un wallet
      */
     public function updateWalletBalance(string $walletId, float $newBalance): bool
     {
-        return Wallet::where('id', $walletId)->update(['balance' => $newBalance]);
+        return Wallet::where('id', $walletId)
+            ->update(['balance' => $newBalance]);
     }
 
     /**
-     * Obtenir l'historique des paiements d'un utilisateur
+     * Obtenir l’historique des paiements d’un utilisateur
      */
     public function getUserPaymentHistory(string $userId, int $page = 1, int $limit = 10)
     {
         $wallet = $this->getUserWallet($userId);
-        if (!$wallet) {
-            return collect([]);
-        }
+        if (!$wallet) return collect([]);
 
-        $filters = [
+        return $this->all([
             'wallet_id' => $wallet->id,
             'type' => ['payment']
-        ];
-
-        return $this->all($filters, $page, $limit);
+        ], $page, $limit);
     }
 
     /**
-     * Obtenir l'historique des paiements reçus par un marchand
+     * Obtenir l’historique des paiements reçus par un marchand
      */
     public function getMerchantPaymentHistory(string $merchantId, int $page = 1, int $limit = 10)
     {
         $wallet = $this->getMerchantWallet($merchantId);
-        if (!$wallet) {
-            return collect([]);
-        }
+        if (!$wallet) return collect([]);
 
-        $filters = [
+        return $this->all([
             'wallet_id' => $wallet->id,
             'type' => ['payment']
-        ];
-
-        return $this->all($filters, $page, $limit);
+        ], $page, $limit);
     }
 }
