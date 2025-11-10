@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('wallet_id')->constrained('wallets')->onDelete('cascade');
+            $table->uuid('id'); // Temporairement sans primary
+            $table->uuid('wallet_id'); // Temporairement sans foreign key
             $table->enum('type', ['transfer', 'payment', 'deposit', 'withdrawal']);
             $table->decimal('amount', 15, 2);
             $table->enum('status', ['pending', 'success', 'failed'])->default('pending');
-            $table->string('reference')->unique(); // identifiant transaction
+            $table->string('reference'); // Temporairement sans unique
             $table->json('meta')->nullable(); // infos supplémentaires (destinataire, marchand, etc.)
             $table->timestamps();
         });

@@ -174,9 +174,13 @@ class AuthController extends Controller
      *     )
      * )
      */
-    public function logout()
+    public function logout(Request $request)
     {
-        auth()->user()->token()->revoke();
+        $token = $request->bearerToken();
+        if ($token) {
+            $passportService = app(\App\Services\MongoPassportService::class);
+            $passportService->revokeToken($token);
+        }
 
         return response()->json(['message' => 'Déconnecté avec succès']);
     }

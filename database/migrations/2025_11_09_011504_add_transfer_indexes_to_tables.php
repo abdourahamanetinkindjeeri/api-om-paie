@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Temporairement commenté à cause des limitations d'espace disque MongoDB
+        // TODO: Réactiver ces index quand l'espace disque sera suffisant ou avec une autre base de données
+
+        /*
         // Ajouter un index sur le champ numero de la table users pour optimiser les recherches
         Schema::table('users', function (Blueprint $table) {
             $table->index('numero');
@@ -27,6 +31,7 @@ return new class extends Migration
         Schema::table('wallets', function (Blueprint $table) {
             $table->index('user_id');
         });
+        */
     }
 
     /**

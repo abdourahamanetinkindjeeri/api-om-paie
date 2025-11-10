@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('wallets', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->nullable()->constrained('users')->onDelete('cascade');
-            $table->foreignUuid('merchant_id')->nullable()->constrained('merchants')->onDelete('cascade');
+            $table->uuid('id'); // Temporairement sans primary
+            $table->uuid('user_id')->nullable(); // Temporairement sans foreign key
+            $table->uuid('merchant_id')->nullable(); // Temporairement sans foreign key
             $table->decimal('balance', 15, 2)->default(0);
             $table->string('currency', 3)->default('XOF');
             $table->timestamps();

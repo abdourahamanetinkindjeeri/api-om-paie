@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('merchants', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->uuid('id'); // Temporairement sans primary
             $table->string('name');
-            $table->string('code')->unique(); // code marchand
-            $table->string('telephone')->unique();
+            $table->string('code'); // Temporairement sans unique
+            $table->string('telephone'); // Temporairement sans unique
             $table->string('email')->nullable();
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();

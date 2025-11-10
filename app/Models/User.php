@@ -109,6 +109,15 @@ class User extends Model
     }
 
     /**
+     * Crée un token d'accès personnel avec MongoDB
+     */
+    public function createToken(string $name = 'Personal Access Token', array $scopes = [])
+    {
+        $passportService = app(\App\Services\MongoPassportService::class);
+        return $passportService->createPersonalAccessToken($this, $name, $scopes);
+    }
+
+    /**
      * Relations
      */
 
