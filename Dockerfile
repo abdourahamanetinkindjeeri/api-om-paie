@@ -21,16 +21,13 @@ RUN apk add --no-cache \
 
 # Installer extensions PHP nécessaires
 RUN docker-php-ext-install \
-        pdo \
-        pdo_mysql \
-        bcmath \
-        zip \
-        opcache \
-        dom \
-        tokenizer \
-        fileinfo \
-        session \
-        sodium
+    pdo \
+    pdo_mysql \
+    bcmath \
+    zip \
+    opcache \
+    dom
+
 
 # Compiler et activer MongoDB
 RUN pecl install mongodb \
