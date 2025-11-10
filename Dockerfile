@@ -17,7 +17,8 @@ RUN apk add --no-cache \
         oniguruma-dev \
         libxml2-dev \
         gmp-dev \
-        zlib-dev
+        zlib-dev \
+        libsodium-dev
 
 # Installer extensions PHP nécessaires
 RUN docker-php-ext-install \
@@ -26,7 +27,11 @@ RUN docker-php-ext-install \
     bcmath \
     zip \
     opcache \
-    dom
+    dom \
+    tokenizer \
+    session \
+    fileinfo \
+    sodium
 
 
 # Compiler et activer MongoDB
@@ -60,11 +65,12 @@ RUN apk add --no-cache \
         libjpeg-turbo-dev \
         libwebp-dev \
         libpng-dev \
-        pkgconf
+        pkgconf \
+        libsodium-dev
 
-# Configurer et installer GD
+# Configurer et installer GD et autres extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install gd pcntl
+    && docker-php-ext-install gd pcntl pdo pdo_mysql bcmath zip opcache dom tokenizer session fileinfo sodium
 
 # Copier l’extension MongoDB compilée depuis le stage build
 COPY --from=build /usr/local/lib/php/extensions/no-debug-non-zts-20230831/mongodb.so /usr/local/lib/php/extensions/no-debug-non-zts-20230831/

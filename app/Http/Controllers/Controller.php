@@ -20,15 +20,17 @@ use Illuminate\Routing\Controller as BaseController;
  *     )
  * )
  *
+ *
+ ** @OA\Server(
+ *     url="https://tinkin-transfer.onrender.com/api",
+ *     description="Serveur de production sur Render"
+ * )
+ *
  * @OA\Server(
  *     url="http://localhost:8000/api",
  *     description="Serveur de développement"
  * )
  *
- * @OA\Server(
- *     url="https://tinkin-transa.onrender.com/api",
- *     description="Serveur de production sur Render"
- * )
  *
  * @OA\SecurityScheme(
  *     securityScheme="passport",
