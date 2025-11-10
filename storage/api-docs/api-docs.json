@@ -14,12 +14,12 @@
     },
     "servers": [
         {
-            "url": "http://localhost:8000/api",
-            "description": "Serveur de développement"
+            "url": "https://tinkin-transfer.onrender.com/api",
+            "description": "Serveur de production sur Render"
         },
         {
-            "url": "https://tinkin-transa.onrender.com/api",
-            "description": "Serveur de production sur Render"
+            "url": "http://localhost:8000/api",
+            "description": "Serveur de développement"
         }
     ],
     "paths": {
@@ -904,6 +904,194 @@
                 ]
             }
         },
+        "/user/qrcode": {
+            "get": {
+                "tags": [
+                    "QR Code"
+                ],
+                "summary": "Générer le QR code de l'utilisateur connecté",
+                "operationId": "e2049956162188a5729f7f5c7cfe1623",
+                "responses": {
+                    "200": {
+                        "description": "QR code généré avec succès",
+                        "content": {
+                            "image/svg+xml": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/user/qrcode/data": {
+            "get": {
+                "tags": [
+                    "QR Code"
+                ],
+                "summary": "Obtenir les données du QR code de l'utilisateur connecté",
+                "operationId": "1193ffd3ac81ce043cd6ec868bba3098",
+                "responses": {
+                    "200": {
+                        "description": "Données du QR code récupérées avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Données du QR code récupérées avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user_id": {
+                                                    "type": "string",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "telephone": {
+                                                    "type": "string",
+                                                    "example": "+221771234567"
+                                                },
+                                                "nom_complet": {
+                                                    "type": "string",
+                                                    "example": "John Doe"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "om_paie_user"
+                                                },
+                                                "timestamp": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "qr_string": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/qrcode/scan": {
+            "post": {
+                "tags": [
+                    "QR Code"
+                ],
+                "summary": "Scanner et décoder un QR code",
+                "operationId": "c60c292d49ef6fed16b79490ac6a510c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "qr_data": {
+                                        "description": "Données du QR code scanné",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "QR code décodé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user_id": {
+                                                    "type": "string"
+                                                },
+                                                "telephone": {
+                                                    "type": "string"
+                                                },
+                                                "nom_complet": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "user_info": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "nom": {
+                                                    "type": "string"
+                                                },
+                                                "prenom": {
+                                                    "type": "string"
+                                                },
+                                                "telephone": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "QR code invalide"
+                    },
+                    "404": {
+                        "description": "Utilisateur non trouvé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/transfer": {
             "post": {
                 "tags": [
@@ -1553,6 +1741,10 @@
         {
             "name": "Payment",
             "description": "Paiements vers les marchands"
+        },
+        {
+            "name": "QR Code",
+            "description": "Génération et lecture de QR codes pour les utilisateurs"
         }
     ]
 }

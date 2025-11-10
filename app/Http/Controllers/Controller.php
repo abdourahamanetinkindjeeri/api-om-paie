@@ -65,6 +65,11 @@ use Illuminate\Routing\Controller as BaseController;
  *     name="Payment",
  *     description="Paiements vers les marchands"
  * )
+ *
+ * @OA\Tag(
+ *     name="QR Code",
+ *     description="Génération et lecture de QR codes pour les utilisateurs"
+ * )
  */
 class Controller extends BaseController
 {

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\QrCodeController;
 
 
 /*
@@ -87,6 +88,18 @@ Route::middleware('mongo.passport')->prefix('history')->group(function () {
     // Statistiques utilisateur
     Route::get('/stats', [\App\Http\Controllers\HistoryController::class, 'getUserStats']);
 });
+
+// Routes pour les QR codes (protégées par authentification)
+Route::middleware('mongo.passport')->prefix('user')->group(function () {
+    // Générer le QR code de l'utilisateur connecté
+    Route::get('/qrcode', [QrCodeController::class, 'generateUserQrCode']);
+
+    // Obtenir les données du QR code de l'utilisateur connecté
+    Route::get('/qrcode/data', [QrCodeController::class, 'getUserQrCodeData']);
+});
+
+// Route pour scanner un QR code (protégée par authentification)
+Route::middleware('mongo.passport')->post('/qrcode/scan', [QrCodeController::class, 'scanQrCode']);
 
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
