@@ -31,16 +31,19 @@ class TransferController extends Controller
     public function transfer(TransferRequest $request): JsonResponse
     {
         try {
+            // Récupérer l'utilisateur authentifié via auth()
             $sender = auth()->user();
 
             if (!$sender) {
                 return $this->errorResponse('Utilisateur non authentifié', 401);
             }
 
+            $validated = $request->validated();
+
             $result = $this->transferService->transfer(
                 $sender->telephone,
-                $request->input('telephone'),
-                $request->input('montant')
+                $validated['telephone'],
+                $validated['montant']
             );
 
             return $this->successResponse([

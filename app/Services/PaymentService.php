@@ -23,7 +23,8 @@ class PaymentService extends BaseService implements PaymentServiceInterface
      */
     public function payMerchant($user, string $merchantCode, float $amount, array $metadata = []): array
     {
-        return DB::transaction(function () use ($user, $merchantCode, $amount, $metadata) {
+        // Remplacer DB::transaction par une gestion manuelle pour MongoDB standalone
+        try {
             // Validation du montant
             if ($amount <= 0) {
                 throw new Exception('Le montant doit être supérieur à 0');
@@ -118,7 +119,10 @@ class PaymentService extends BaseService implements PaymentServiceInterface
                 'credit_transaction' => $creditTransaction,
                 'metadata' => $metadata
             ];
-        });
+        } catch (Exception $e) {
+            // En cas d'erreur, relancer l'exception
+            throw $e;
+        }
     }
 
     /**

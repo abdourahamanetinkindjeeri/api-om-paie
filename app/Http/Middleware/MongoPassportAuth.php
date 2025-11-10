@@ -45,13 +45,8 @@ class MongoPassportAuth
             return response()->json(['message' => 'Utilisateur non trouvé'], 401);
         }
 
-        // Définir l'utilisateur authentifié pour la requête
-        $request->setUserResolver(function () use ($user) {
-            return $user;
-        });
-
-        // Stocker l'utilisateur dans la requête pour l'utiliser dans les contrôleurs
-        $request->merge(['current_user' => $user]);
+        // Définir l'utilisateur authentifié dans Laravel Auth
+        auth()->setUser($user);
 
         return $next($request);
     }
