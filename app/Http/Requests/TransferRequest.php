@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
+use App\Rules\SenegalPhone;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -25,16 +27,7 @@ class TransferRequest extends FormRequest
             'telephone' => [
                 'required',
                 'string',
-                function ($attribute, $value, $fail) {
-                    $user = \App\Models\User::where('telephone', $value)
-                        ->orWhere('telephone', '+221' . $value)
-                        ->orWhere('telephone', str_replace('+221', '', $value))
-                        ->first();
-
-                    if (!$user) {
-                        $fail('Ce numéro de téléphone n\'existe pas dans notre système.');
-                    }
-                }
+                new SenegalPhone()
             ],
             'montant' => [
                 'required',

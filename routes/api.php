@@ -30,14 +30,14 @@ Route::prefix('auth')->group(function () {
     Route::post('/unlock-account', [AuthController::class, 'unlockAccount']);
 
     // Déconnexion (protégée par Passport)
-    Route::middleware('auth:api')->post('/logout', [AuthController::class, 'logout']);
+    Route::middleware('mongo.passport')->post('/logout', [AuthController::class, 'logout']);
 
     // Récupérer l'utilisateur connecté
-    Route::middleware('auth:api')->get('/me', [AuthController::class, 'me']);
+    Route::middleware('mongo.passport')->get('/me', [AuthController::class, 'me']);
 });
 
 // Routes pour les transferts (protégées par authentification)
-Route::middleware('auth:api')->prefix('transfer')->group(function () {
+Route::middleware('mongo.passport')->prefix('transfer')->group(function () {
     // Effectuer un transfert
     Route::post('/', [TransferController::class, 'transfer']);
 
@@ -52,7 +52,7 @@ Route::middleware('auth:api')->prefix('transfer')->group(function () {
 });
 
 // Routes pour les paiements marchands (protégées par authentification)
-Route::middleware('auth:api')->prefix('payment')->group(function () {
+Route::middleware('mongo.passport')->prefix('payment')->group(function () {
     // Effectuer un paiement vers un marchand
     Route::post('/', [PaymentController::class, 'payMerchant']);
 

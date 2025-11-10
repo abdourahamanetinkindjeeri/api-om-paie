@@ -23,7 +23,8 @@ class TransferService extends BaseService implements TransferServiceInterface
      */
     public function transfer(string $senderNumber, string $receiverNumber, float $amount): array
     {
-        return DB::transaction(function () use ($senderNumber, $receiverNumber, $amount) {
+        // Remplacer DB::transaction par une gestion manuelle pour MongoDB standalone
+        try {
             // Validation du montant
             if ($amount <= 0) {
                 throw new Exception('Le montant doit être supérieur à 0');
@@ -122,7 +123,10 @@ class TransferService extends BaseService implements TransferServiceInterface
                 'debit_transaction' => $debitTransaction,
                 'credit_transaction' => $creditTransaction
             ];
-        });
+        } catch (Exception $e) {
+            // En cas d'erreur, relancer l'exception
+            throw $e;
+        }
     }
 
     /**
