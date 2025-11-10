@@ -116,3 +116,32 @@ nohup: les entrées sont ignorées
   2025-11-10 15:20:35 ................................................... ~ 5s
   2025-11-10 15:21:37 ................................................... ~ 6s
   2025-11-10 15:22:09 ................................................... ~ 2s
+  2025-11-10 15:23:54 ................................................... ~ 1s
+  2025-11-10 15:24:17 ................................................... ~ 1s
+  2025-11-10 15:31:19 ................................................... ~ 3s
+  2025-11-10 15:42:34 ................................................... ~ 3s
+  2025-11-10 16:06:11 ................................................... ~ 2s
+
+   WARN  PHP Deprecated: App\Services\HistoryService::formatTransaction(): Implicitly marking parameter $type as nullable is deprecated, the explicit nullable type must be used instead in app/Services/HistoryService.php on line 118.  
+
+   WARN  PHP Deprecated: App\Repositories\TransactionRepository::countUserTransactions(): Implicitly marking parameter $type as nullable is deprecated, the explicit nullable type must be used instead in app/Repositories/TransactionRepository.php on line 55.  
+
+   WARN  PHP Deprecated: App\Repositories\TransactionRepository::getUserTransactionsByPeriod(): Implicitly marking parameter $type as nullable is deprecated, the explicit nullable type must be used instead in app/Repositories/TransactionRepository.php on line 75.  
+
+  2025-11-10 16:07:51 ................................................... ~ 3s
+  2025-11-10 16:33:56 ................................................... ~ 3s
+  2025-11-10 16:34:37 ................................................... ~ 4s
+  2025-11-10 16:35:06 ................................................... ~ 2s
+
+   WARN  PHP Deprecated: App\Services\HistoryService::formatTransaction(): Implicitly marking parameter $type as nullable is deprecated, the explicit nullable type must be used instead in app/Services/HistoryService.php on line 115.  
+
+   WARN  PHP Deprecated: App\Repositories\TransactionRepository::countUserTransactions(): Implicitly marking parameter $type as nullable is deprecated, the explicit nullable type must be used instead in app/Repositories/TransactionRepository.php on line 55.  
+
+   WARN  PHP Deprecated: App\Repositories\TransactionRepository::getUserTransactionsByPeriod(): Implicitly marking parameter $type as nullable is deprecated, the explicit nullable type must be used instead in app/Repositories/TransactionRepository.php on line 75.  
+
+  2025-11-10 16:36:28 ................................................... ~ 3s
+  2025-11-10 16:39:36 ................................................... ~ 1s
+  2025-11-10 16:39:43 ................................................... ~ 3s
+  2025-11-10 16:40:06 ................................................... ~ 2s
+  2025-11-10 16:40:46 ................................................... ~ 3s
+  2025-11-10 16:40:57 ................................................... ~ 2s

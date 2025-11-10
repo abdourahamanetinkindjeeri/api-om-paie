@@ -51,7 +51,7 @@ Route::middleware('mongo.passport')->prefix('transfer')->group(function () {
     // Obtenir le solde de l'utilisateur connecté
     Route::get('/balance', [TransferController::class, 'getBalance']);
 
-    // Obtenir l'historique des transferts
+    // Obtenir l'historique des transferts (ancien endpoint, garde pour compatibilité)
     Route::get('/history', [TransferController::class, 'getTransferHistory']);
 });
 
@@ -71,6 +71,21 @@ Route::middleware('mongo.passport')->prefix('payment')->group(function () {
 
     // Obtenir l'historique des paiements reçus (pour les marchands)
     Route::post('/merchant-history', [PaymentController::class, 'getMerchantPaymentHistory']);
+});
+
+// Routes pour l'historique unifié (protégées par authentification)
+Route::middleware('mongo.passport')->prefix('history')->group(function () {
+    // Historique complet (paiements + transferts) trié par date décroissante
+    Route::get('/', [\App\Http\Controllers\HistoryController::class, 'getUserHistory']);
+
+    // Historique des transferts seulement
+    Route::get('/transfers', [\App\Http\Controllers\HistoryController::class, 'getUserTransferHistory']);
+
+    // Historique des paiements seulement
+    Route::get('/payments', [\App\Http\Controllers\HistoryController::class, 'getUserPaymentHistory']);
+
+    // Statistiques utilisateur
+    Route::get('/stats', [\App\Http\Controllers\HistoryController::class, 'getUserStats']);
 });
 
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

@@ -42,6 +42,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Contracts\RegistrationServiceInterface::class,
             \App\Services\RegistrationService::class
         );
+
+        // Enregistrement du service d'historique
+        $this->app->bind(
+            \App\Services\Contracts\HistoryServiceInterface::class,
+            \App\Services\HistoryService::class
+        );
     }
 
     /**
