@@ -101,6 +101,16 @@ Route::middleware('mongo.passport')->prefix('user')->group(function () {
 // Route pour scanner un QR code (protégée par authentification)
 Route::middleware('mongo.passport')->post('/qrcode/scan', [QrCodeController::class, 'scanQrCode']);
 
+// Route pour le health check (Docker)
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'timestamp' => now()->toISOString(),
+        'service' => 'OM-Paie API',
+        'version' => '2.0.0'
+    ]);
+});
+
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
 // });

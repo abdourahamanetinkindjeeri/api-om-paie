@@ -1,0 +1,59 @@
+# Répertoires et fichiers à exclure du contexte Docker
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Tests et développement
+tests/
+phpunit.xml
+.phpunit.result.cache
+
+# Documentation
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+storage/logs/*.log
+*.log
+
+# Cache Laravel
+bootstrap/cache/*.php
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+
+# Configuration locale
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile.backup
+docker-compose.yml
+docker-compose.yaml
+
+# Déploiement
+render.yaml
+DEPLOY_RENDER.md
+
+# Historique
+Historique.json
+
+# Postman
+postman/
