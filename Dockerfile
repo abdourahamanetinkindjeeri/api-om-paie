@@ -1,9 +1,9 @@
 # ==========================
-# Étape 1 : Build des dépendances PHP avec Composer
+# Étape 1 : Build des dépendances PHP avec Composer et MongoDB
 # ==========================
-FROM php:8.3-fpm-alpine AS composer-build
+FROM php:8.3-fpm-alpine AS build
 
-# Installer dépendances système et extensions PHP nécessaires
+# Installer dépendances système et outils de compilation
 RUN apk add --no-cache \
         curl \
         composer \
@@ -17,18 +17,21 @@ RUN apk add --no-cache \
         oniguruma-dev \
         libxml2-dev \
         gmp-dev \
-        zlib-dev \
-    && pecl install mongodb \
-    && docker-php-ext-enable mongodb \
-    && docker-php-ext-install pdo pdo_mysql bcmath zip opcache \
-    && apk del gcc g++ make autoconf libtool
+        zlib-dev
+
+# Compiler et activer MongoDB
+RUN pecl install mongodb \
+    && docker-php-ext-enable mongodb
+
+# Installer extensions PHP nécessaires
+RUN docker-php-ext-install pdo pdo_mysql bcmath zip opcache
 
 WORKDIR /app
 
 # Copier uniquement composer.json et composer.lock
 COPY composer.json composer.lock /app/
 
-# Installer dépendances sans scripts artisan
+# Installer dépendances Laravel
 RUN composer install --no-scripts --no-interaction --prefer-dist --optimize-autoloader
 
 # Copier le reste du code source
@@ -50,11 +53,15 @@ RUN apk add --no-cache \
         libjpeg-turbo-dev \
         libwebp-dev \
         libpng-dev \
-        pkgconf \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install gd pcntl \
-    && pecl install mongodb \
-    && docker-php-ext-enable mongodb
+        pkgconf
+
+# Configurer et installer GD
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install gd pcntl
+
+# Copier l’extension MongoDB compilée depuis le stage build
+COPY --from=build /usr/local/lib/php/extensions/no-debug-non-zts-20230831/mongodb.so /usr/local/lib/php/extensions/no-debug-non-zts-20230831/
+RUN echo "extension=mongodb.so" > /usr/local/etc/php/conf.d/mongodb.ini
 
 # Créer utilisateur non-root
 RUN addgroup -g 1000 laravel \
@@ -63,7 +70,7 @@ RUN addgroup -g 1000 laravel \
 WORKDIR /var/www/html
 
 # Copier le code depuis l’étape build
-COPY --from=composer-build /app /var/www/html
+COPY --from=build /app /var/www/html
 
 # Config Nginx
 COPY ./nginx.conf /etc/nginx/nginx.conf
@@ -76,6 +83,7 @@ RUN mkdir -p storage/framework/{cache,data,sessions,testing,views} \
 
 USER laravel
 
-EXPOSE 80
+EXPOSE 8000
 
+# Lancer migrations + Passport + services
 CMD ["sh", "-c", "php artisan migrate --force && php artisan passport:install --force && php-fpm & nginx -g 'daemon off;'"]

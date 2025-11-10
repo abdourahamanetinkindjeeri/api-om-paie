@@ -76,30 +76,36 @@ class PaymentRepository extends BaseRepository
     }
 
     /**
-     * Obtenir l’historique des paiements d’un utilisateur
+     * Obtenir l'historique des paiements d'un utilisateur
      */
     public function getUserPaymentHistory(string $userId, int $page = 1, int $limit = 10)
     {
         $wallet = $this->getUserWallet($userId);
         if (!$wallet) return collect([]);
 
-        return $this->all([
-            'wallet_id' => $wallet->id,
-            'type' => ['payment']
-        ], $page, $limit);
+        // Requête avec tri par date décroissante
+        $query = $this->model->newQuery()
+            ->where('wallet_id', $wallet->id)
+            ->whereIn('type', ['payment'])
+            ->orderBy('created_at', 'desc'); // Tri par date décroissante
+
+        return $query->paginate($limit, ['*'], 'page', $page);
     }
 
     /**
-     * Obtenir l’historique des paiements reçus par un marchand
+     * Obtenir l'historique des paiements reçus par un marchand
      */
     public function getMerchantPaymentHistory(string $merchantId, int $page = 1, int $limit = 10)
     {
         $wallet = $this->getMerchantWallet($merchantId);
         if (!$wallet) return collect([]);
 
-        return $this->all([
-            'wallet_id' => $wallet->id,
-            'type' => ['payment']
-        ], $page, $limit);
+        // Requête avec tri par date décroissante
+        $query = $this->model->newQuery()
+            ->where('wallet_id', $wallet->id)
+            ->whereIn('type', ['payment'])
+            ->orderBy('created_at', 'desc'); // Tri par date décroissante
+
+        return $query->paginate($limit, ['*'], 'page', $page);
     }
 }

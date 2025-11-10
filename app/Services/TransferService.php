@@ -161,17 +161,18 @@ class TransferService extends BaseService implements TransferServiceInterface
             throw new Exception('Utilisateur non trouvé');
         }
 
-        $wallet = $this->transferRepository->getUserWallet($user->id);
-        if (!$wallet) {
-            throw new Exception('Wallet non trouvé');
-        }
+        // Utiliser la nouvelle méthode avec tri par date décroissante
+        $result = $this->transferRepository->getUserTransferHistory($user->id, $page, $limit);
 
-        $filters = [
-            'wallet_id' => $wallet->id,
-            'type' => ['transfer']
+        // Retourner un tableau avec les données paginées
+        return [
+            'transfers' => $result->items(),
+            'pagination' => [
+                'current_page' => $result->currentPage(),
+                'per_page' => $result->perPage(),
+                'total' => $result->total(),
+                'last_page' => $result->lastPage()
+            ]
         ];
-
-        $result = $this->transferRepository->all($filters, $page, $limit);
-        return $result->items();
     }
 }

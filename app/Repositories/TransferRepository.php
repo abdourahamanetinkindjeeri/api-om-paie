@@ -64,4 +64,21 @@ class TransferRepository extends BaseRepository
     {
         return Transaction::where('reference', $reference)->get()->toArray();
     }
+
+    /**
+     * Obtenir l'historique des transferts d'un utilisateur avec tri par date décroissante
+     */
+    public function getUserTransferHistory(string $userId, int $page = 1, int $limit = 10)
+    {
+        $wallet = $this->getUserWallet($userId);
+        if (!$wallet) return collect([]);
+
+        // Requête avec tri par date décroissante
+        $query = $this->model->newQuery()
+            ->where('wallet_id', $wallet->id)
+            ->whereIn('type', ['transfer'])
+            ->orderBy('created_at', 'desc'); // Tri par date décroissante
+
+        return $query->paginate($limit, ['*'], 'page', $page);
+    }
 }

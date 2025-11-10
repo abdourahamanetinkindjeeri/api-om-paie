@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\PaymentRequest;
 use App\Http\Resources\PaymentResource;
+use App\Http\Resources\TransactionHistoryResource;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,59 @@ class PaymentController extends Controller
     }
 
     /**
-     * Effectuer un paiement marchand
+     * @OA\Post(
+     *     path="/payment",
+     *     summary="Effectuer un paiement vers un marchand",
+     *     description="Effectue un paiement d'un utilisateur vers un marchand par code marchand",
+     *     operationId="payMerchant",
+     *     tags={"Payment"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"code_marchand", "montant"},
+     *             @OA\Property(property="code_marchand", type="string", example="BOUT001", description="Code unique du marchand"),
+     *             @OA\Property(property="montant", type="number", format="float", example=2500, description="Montant à payer (min: 1, max: 1000000)"),
+     *             @OA\Property(property="description", type="string", example="Achat produits", description="Description optionnelle du paiement")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paiement effectué avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Paiement effectué avec succès"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="string", example="64f7b1a2c5d4e123456789ae"),
+     *                 @OA\Property(property="type", type="string", example="payment"),
+     *                 @OA\Property(property="montant", type="number", format="float", example=2500),
+     *                 @OA\Property(property="expediteur_telephone", type="string", example="+221771234567"),
+     *                 @OA\Property(property="destinataire_telephone", type="string", example="+221338901234"),
+     *                 @OA\Property(property="status", type="string", example="completed"),
+     *                 @OA\Property(property="metadata", type="object",
+     *                     @OA\Property(property="code_marchand", type="string", example="BOUT001"),
+     *                     @OA\Property(property="description", type="string", example="Achat produits")
+     *                 ),
+     *                 @OA\Property(property="created_at", type="string", format="date-time")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur métier (solde insuffisant, marchand introuvable, etc.)",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Erreur de validation",
+     *         @OA\JsonContent(ref="#/components/schemas/ValidationErrorResponse")
+     *     )
+     * )
      */
     public function payMerchant(PaymentRequest $request): JsonResponse
     {
@@ -50,7 +103,45 @@ class PaymentController extends Controller
     }
 
     /**
-     * Vérifier l’existence d’un marchand
+     * @OA\Post(
+     *     path="/payment/check-merchant",
+     *     summary="Vérifier un code marchand",
+     *     description="Vérifie si un code marchand existe et est actif, retourne les informations du marchand",
+     *     operationId="checkMerchant",
+     *     tags={"Payment"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"code_marchand"},
+     *             @OA\Property(property="code_marchand", type="string", example="BOUT001", description="Code unique du marchand")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Marchand trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="exists", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Marchand trouvé"),
+     *             @OA\Property(property="merchant", ref="#/components/schemas/Merchant")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Marchand non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="exists", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Marchand non trouvé")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
      */
     public function checkMerchant(Request $request): JsonResponse
     {
@@ -74,7 +165,45 @@ class PaymentController extends Controller
     }
 
     /**
-     * Obtenir les informations d’un marchand
+     * @OA\Post(
+     *     path="/payment/merchant-info",
+     *     summary="Obtenir les informations d'un marchand",
+     *     description="Récupère les informations publiques d'un marchand par son code",
+     *     operationId="getMerchantInfo",
+     *     tags={"Payment"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"code_marchand"},
+     *             @OA\Property(property="code_marchand", type="string", example="BOUT001", description="Code unique du marchand")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Informations du marchand récupérées",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="merchant", type="object",
+     *                 @OA\Property(property="code", type="string", example="BOUT001"),
+     *                 @OA\Property(property="name", type="string", example="Boutique Fatou"),
+     *                 @OA\Property(property="telephone", type="string", example="+221775551234"),
+     *                 @OA\Property(property="email", type="string", example="fatou@boutique.sn"),
+     *                 @OA\Property(property="status", type="string", example="active")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Marchand non trouvé",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
      */
     public function getMerchantInfo(Request $request): JsonResponse
     {
@@ -95,34 +224,117 @@ class PaymentController extends Controller
     }
 
     /**
-     * Historique des paiements de l'utilisateur connecté
+     * @OA\Get(
+     *     path="/payment/history",
+     *     summary="Historique des paiements utilisateur",
+     *     description="Récupère l'historique des paiements effectués par l'utilisateur authentifié, triés par date décroissante (du plus récent au plus ancien)",
+     *     operationId="getUserPaymentHistory",
+     *     tags={"Payment"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Numéro de la page",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1, default=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Nombre d'éléments par page",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=10, default=10)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Historique des paiements récupéré avec succès (triés par date décroissante - plus récents en premier)",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Historique des paiements récupéré avec succès"),
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(ref="#/components/schemas/Transaction")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
      */
     public function getUserPaymentHistory(Request $request): JsonResponse
     {
         try {
-            $user = auth()->user();
+            // Essayer différentes méthodes d'authentification
+            $user = auth()->user() ?? auth('api')->user();
+
             if (!$user) {
-                return response()->json(['success' => false, 'message' => 'Utilisateur non authentifié'], 401);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié',
+                    'debug' => 'Auth guard: ' . config('auth.defaults.guard')
+                ], 401);
             }
 
-            $page = (int) $request->query('page', 1);
-            $limit = (int) $request->query('limit', 10);
+            $page = max(1, (int) $request->query('page', 1));
+            $limit = max(1, min(100, (int) $request->query('limit', 10))); // Limite max de 100
 
             $history = $this->paymentService->getUserPaymentHistory($user->telephone, $page, $limit);
+
+            // Vérifier si l'historique est une collection vide
+            if (is_countable($history) && count($history) === 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Aucun paiement trouvé',
+                    'data' => []
+                ], 200);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Historique des paiements récupéré avec succès',
-                'data' => PaymentResource::collection($history)
+                'data' => TransactionHistoryResource::collection($history)
             ], 200);
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération de l\'historique',
+                'error' => $e->getMessage(),
+                'trace' => app()->environment('local') ? $e->getTraceAsString() : null
+            ], 400);
         }
     }
 
     /**
-     * Historique des paiements reçus par un marchand
-     * TODO: Authentification marchands à implémenter
+     * @OA\Post(
+     *     path="/payment/merchant-history",
+     *     summary="Historique des paiements d'un marchand",
+     *     description="Récupère l'historique des paiements reçus par un marchand, triés par date décroissante (fonctionnalité réservée aux marchands authentifiés - non implémentée)",
+     *     operationId="getMerchantPaymentHistory",
+     *     tags={"Payment"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"code_marchand"},
+     *             @OA\Property(property="code_marchand", type="string", example="BOUT001", description="Code unique du marchand")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Fonctionnalité non disponible",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Fonctionnalité réservée aux marchands authentifiés")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
      */
     public function getMerchantPaymentHistory(Request $request): JsonResponse
     {

@@ -423,8 +423,8 @@
                 "tags": [
                     "Payment"
                 ],
-                "summary": "Effectuer un paiement marchand",
-                "description": "Effectue un paiement de l'utilisateur vers un marchand",
+                "summary": "Effectuer un paiement vers un marchand",
+                "description": "Effectue un paiement d'un utilisateur vers un marchand par code marchand",
                 "operationId": "payMerchant",
                 "requestBody": {
                     "required": true,
@@ -439,10 +439,10 @@
                                     "code_marchand": {
                                         "description": "Code unique du marchand",
                                         "type": "string",
-                                        "example": "SND001"
+                                        "example": "BOUT001"
                                     },
                                     "montant": {
-                                        "description": "Montant à payer en FCFA",
+                                        "description": "Montant à payer (min: 1, max: 1000000)",
                                         "type": "number",
                                         "format": "float",
                                         "example": 2500
@@ -450,12 +450,7 @@
                                     "description": {
                                         "description": "Description optionnelle du paiement",
                                         "type": "string",
-                                        "example": "Achat produits alimentaires"
-                                    },
-                                    "reference_externe": {
-                                        "description": "Référence externe optionnelle",
-                                        "type": "string",
-                                        "example": "REF-2024-001"
+                                        "example": "Achat produits"
                                     }
                                 },
                                 "type": "object"
@@ -475,21 +470,48 @@
                                             "example": true
                                         },
                                         "message": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "example": "Paiement effectué avec succès"
                                         },
                                         "data": {
                                             "properties": {
                                                 "id": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "example": "64f7b1a2c5d4e123456789ae"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "payment"
                                                 },
                                                 "montant": {
-                                                    "type": "number"
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 2500
                                                 },
-                                                "marchand": {
-                                                    "type": "object"
+                                                "expediteur_telephone": {
+                                                    "type": "string",
+                                                    "example": "+221771234567"
+                                                },
+                                                "destinataire_telephone": {
+                                                    "type": "string",
+                                                    "example": "+221338901234"
                                                 },
                                                 "status": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "example": "completed"
+                                                },
+                                                "metadata": {
+                                                    "properties": {
+                                                        "code_marchand": {
+                                                            "type": "string",
+                                                            "example": "BOUT001"
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "example": "Achat produits"
+                                                        }
+                                                    },
+                                                    "type": "object"
                                                 },
                                                 "created_at": {
                                                     "type": "string",
@@ -505,7 +527,347 @@
                         }
                     },
                     "400": {
-                        "description": "Erreur lors du paiement",
+                        "description": "Erreur métier (solde insuffisant, marchand introuvable, etc.)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/payment/check-merchant": {
+            "post": {
+                "tags": [
+                    "Payment"
+                ],
+                "summary": "Vérifier un code marchand",
+                "description": "Vérifie si un code marchand existe et est actif, retourne les informations du marchand",
+                "operationId": "checkMerchant",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code_marchand"
+                                ],
+                                "properties": {
+                                    "code_marchand": {
+                                        "description": "Code unique du marchand",
+                                        "type": "string",
+                                        "example": "BOUT001"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Marchand trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "exists": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Marchand trouvé"
+                                        },
+                                        "merchant": {
+                                            "$ref": "#/components/schemas/Merchant"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Marchand non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "exists": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Marchand non trouvé"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/payment/merchant-info": {
+            "post": {
+                "tags": [
+                    "Payment"
+                ],
+                "summary": "Obtenir les informations d'un marchand",
+                "description": "Récupère les informations publiques d'un marchand par son code",
+                "operationId": "getMerchantInfo",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code_marchand"
+                                ],
+                                "properties": {
+                                    "code_marchand": {
+                                        "description": "Code unique du marchand",
+                                        "type": "string",
+                                        "example": "BOUT001"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Informations du marchand récupérées",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "merchant": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "BOUT001"
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Boutique Fatou"
+                                                },
+                                                "telephone": {
+                                                    "type": "string",
+                                                    "example": "+221775551234"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "fatou@boutique.sn"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "active"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Marchand non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/payment/history": {
+            "get": {
+                "tags": [
+                    "Payment"
+                ],
+                "summary": "Historique des paiements utilisateur",
+                "description": "Récupère l'historique des paiements effectués par l'utilisateur authentifié, triés par date décroissante (du plus récent au plus ancien)",
+                "operationId": "getUserPaymentHistory",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Numéro de la page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique des paiements récupéré avec succès (triés par date décroissante - plus récents en premier)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Historique des paiements récupéré avec succès"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/payment/merchant-history": {
+            "post": {
+                "tags": [
+                    "Payment"
+                ],
+                "summary": "Historique des paiements d'un marchand",
+                "description": "Récupère l'historique des paiements reçus par un marchand, triés par date décroissante (fonctionnalité réservée aux marchands authentifiés - non implémentée)",
+                "operationId": "getMerchantPaymentHistory",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code_marchand"
+                                ],
+                                "properties": {
+                                    "code_marchand": {
+                                        "description": "Code unique du marchand",
+                                        "type": "string",
+                                        "example": "BOUT001"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "403": {
+                        "description": "Fonctionnalité non disponible",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -515,7 +877,8 @@
                                             "example": false
                                         },
                                         "message": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "example": "Fonctionnalité réservée aux marchands authentifiés"
                                         }
                                     },
                                     "type": "object"
@@ -524,7 +887,14 @@
                         }
                     },
                     "401": {
-                        "description": "Non authentifié"
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -540,7 +910,7 @@
                     "Transfer"
                 ],
                 "summary": "Effectuer un transfert d'argent",
-                "description": "Transfère de l'argent du compte de l'utilisateur connecté vers un autre utilisateur",
+                "description": "Effectue un transfert d'argent entre l'utilisateur authentifié et un destinataire",
                 "operationId": "transfer",
                 "requestBody": {
                     "required": true,
@@ -553,12 +923,12 @@
                                 ],
                                 "properties": {
                                     "telephone": {
-                                        "description": "Numéro du destinataire",
+                                        "description": "Numéro de téléphone du destinataire",
                                         "type": "string",
-                                        "example": "+221771234567"
+                                        "example": "+221781234567"
                                     },
                                     "montant": {
-                                        "description": "Montant à transférer en FCFA",
+                                        "description": "Montant à transférer (min: 1, max: 1000000)",
                                         "type": "number",
                                         "format": "float",
                                         "example": 5000
@@ -581,24 +951,35 @@
                                             "example": true
                                         },
                                         "message": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "example": "Transfert effectué avec succès"
                                         },
                                         "data": {
                                             "properties": {
                                                 "id": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "example": "64f7b1a2c5d4e123456789ad"
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "transfer"
                                                 },
                                                 "montant": {
-                                                    "type": "number"
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 5000
                                                 },
-                                                "expediteur": {
-                                                    "type": "string"
+                                                "expediteur_telephone": {
+                                                    "type": "string",
+                                                    "example": "+221771234567"
                                                 },
-                                                "destinataire": {
-                                                    "type": "string"
+                                                "destinataire_telephone": {
+                                                    "type": "string",
+                                                    "example": "+221781234567"
                                                 },
                                                 "status": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "example": "completed"
                                                 },
                                                 "created_at": {
                                                     "type": "string",
@@ -614,20 +995,11 @@
                         }
                     },
                     "400": {
-                        "description": "Erreur lors du transfert",
+                        "description": "Erreur métier (solde insuffisant, etc.)",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -637,16 +1009,17 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
                                 }
                             }
                         }
@@ -665,7 +1038,7 @@
                     "Transfer"
                 ],
                 "summary": "Vérifier l'existence d'un numéro",
-                "description": "Vérifie si un numéro de téléphone est enregistré dans le système",
+                "description": "Vérifie si un numéro de téléphone existe dans le système",
                 "operationId": "checkNumber",
                 "requestBody": {
                     "required": true,
@@ -677,8 +1050,9 @@
                                 ],
                                 "properties": {
                                     "numero": {
+                                        "description": "Numéro de téléphone à vérifier",
                                         "type": "string",
-                                        "example": "+221771234567"
+                                        "example": "+221781234567"
                                     }
                                 },
                                 "type": "object"
@@ -688,7 +1062,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Vérification effectuée",
+                        "description": "Vérification effectuée avec succès",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -697,11 +1071,13 @@
                                             "type": "boolean",
                                             "example": true
                                         },
-                                        "exists": {
-                                            "type": "boolean"
-                                        },
                                         "message": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "example": "Numéro trouvé"
+                                        },
+                                        "exists": {
+                                            "type": "boolean",
+                                            "example": true
                                         }
                                     },
                                     "type": "object"
@@ -710,20 +1086,21 @@
                         }
                     },
                     "400": {
-                        "description": "Erreur de validation",
+                        "description": "Erreur de requête",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -741,8 +1118,8 @@
                 "tags": [
                     "Transfer"
                 ],
-                "summary": "Obtenir le solde utilisateur",
-                "description": "Récupère le solde du portefeuille de l'utilisateur connecté",
+                "summary": "Obtenir le solde de l'utilisateur",
+                "description": "Récupère le solde du portefeuille de l'utilisateur authentifié",
                 "operationId": "getBalance",
                 "responses": {
                     "200": {
@@ -755,10 +1132,14 @@
                                             "type": "boolean",
                                             "example": true
                                         },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solde récupéré avec succès"
+                                        },
                                         "solde": {
                                             "type": "number",
                                             "format": "float",
-                                            "example": 25000
+                                            "example": 25000.5
                                         },
                                         "numero": {
                                             "type": "string",
@@ -771,20 +1152,11 @@
                         }
                     },
                     "400": {
-                        "description": "Erreur lors de la récupération du solde",
+                        "description": "Impossible de récupérer le solde",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -794,16 +1166,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -821,18 +1184,19 @@
                 "tags": [
                     "Transfer"
                 ],
-                "summary": "Obtenir l'historique des transferts",
-                "description": "Récupère l'historique des transferts (envoyés et reçus) de l'utilisateur connecté",
+                "summary": "Historique des transferts",
+                "description": "Récupère l'historique des transferts de l'utilisateur authentifié (envoyés et reçus), triés par date décroissante (du plus récent au plus ancien)",
                 "operationId": "getTransferHistory",
                 "parameters": [
                     {
                         "name": "page",
                         "in": "query",
-                        "description": "Numéro de page",
+                        "description": "Numéro de la page",
                         "required": false,
                         "schema": {
                             "type": "integer",
-                            "default": 1
+                            "default": 1,
+                            "example": 1
                         }
                     },
                     {
@@ -842,13 +1206,14 @@
                         "required": false,
                         "schema": {
                             "type": "integer",
-                            "default": 10
+                            "default": 10,
+                            "example": 10
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Historique récupéré avec succès",
+                        "description": "Historique récupéré avec succès (triés par date décroissante - plus récents en premier)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -858,36 +1223,32 @@
                                             "example": true
                                         },
                                         "message": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "example": "Historique récupéré avec succès"
                                         },
-                                        "data": {
+                                        "transfers": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        },
+                                        "pagination": {
                                             "properties": {
-                                                "transactions": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "string"
-                                                            },
-                                                            "montant": {
-                                                                "type": "number"
-                                                            },
-                                                            "type": {
-                                                                "type": "string"
-                                                            },
-                                                            "status": {
-                                                                "type": "string"
-                                                            },
-                                                            "created_at": {
-                                                                "type": "string",
-                                                                "format": "date-time"
-                                                            }
-                                                        },
-                                                        "type": "object"
-                                                    }
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
                                                 },
-                                                "pagination": {
-                                                    "type": "object"
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 25
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 3
                                                 }
                                             },
                                             "type": "object"
@@ -899,7 +1260,14 @@
                         }
                     },
                     "401": {
-                        "description": "Non authentifié"
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
