@@ -75,7 +75,7 @@ class RegistrationService implements RegistrationServiceInterface
         try {
             // Vérifier le code OTP
             if (!$this->otpService->verify($identifier, $otpCode, OtpCode::PURPOSE_REGISTRATION)) {
-                throw new ValidationException('Code OTP invalide ou expiré');
+                throw new \Exception('Code OTP invalide ou expiré');
             }
 
             // Récupérer les données temporaires du cache
@@ -83,53 +83,49 @@ class RegistrationService implements RegistrationServiceInterface
             $cachedUserData = Cache::get($cacheKey);
 
             if (!$cachedUserData) {
-                throw new ValidationException('Données d\'enregistrement expirées. Veuillez recommencer.');
+                throw new \Exception('Données d\'enregistrement expirées. Veuillez recommencer.');
             }
 
             // Fusionner avec les nouvelles données si fournies
             $finalUserData = array_merge($cachedUserData, $userData);
 
-            return DB::transaction(function () use ($finalUserData, $identifier) {
-                // Créer l'utilisateur
-                $user = $this->userRepository->create([
-                    'telephone' => $finalUserData['telephone'] ?? null,
-                    'email' => $finalUserData['email'] ?? null,
-                    'nom' => $finalUserData['nom'] ?? '',
-                    'prenom' => $finalUserData['prenom'] ?? '',
-                    'type_piece' => $finalUserData['type_piece'] ?? null,
-                    'numero' => $finalUserData['numero'] ?? null,
-                    'adresse' => $finalUserData['adresse'] ?? null,
-                    'code' => $finalUserData['code'] ?? '1234', // Code par défaut
-                ]);
+            // Créer l'utilisateur (sans transaction car MongoDB simple ne les supporte pas)
+            $user = $this->userRepository->create([
+                'telephone' => $finalUserData['telephone'] ?? null,
+                'email' => $finalUserData['email'] ?? null,
+                'nom' => $finalUserData['nom'] ?? '',
+                'prenom' => $finalUserData['prenom'] ?? '',
+                'type_piece' => $finalUserData['type_piece'] ?? null,
+                'numero' => $finalUserData['numero'] ?? null,
+                'adresse' => $finalUserData['adresse'] ?? null,
+                'code' => $finalUserData['code'] ?? '1234', // Code par défaut
+            ]);
 
-                // Créer le wallet associé
-                $wallet = $this->walletRepository->createForUser($user->id);
+            // Créer le wallet associé
+            $wallet = $this->walletRepository->createForUser($user->id);
 
-                // Supprimer les données temporaires du cache
-                $cacheKey = 'registration_data_' . md5($identifier);
-                Cache::forget($cacheKey);
+            // Supprimer les données temporaires du cache
+            $cacheKey = 'registration_data_' . md5($identifier);
+            Cache::forget($cacheKey);
 
-                Log::info('Utilisateur et wallet créés avec succès', [
-                    'user_id' => $user->id,
-                    'wallet_id' => $wallet->id,
-                    'identifier' => $identifier
-                ]);
+            Log::info('Utilisateur et wallet créés avec succès', [
+                'user_id' => $user->id,
+                'wallet_id' => $wallet->id,
+                'identifier' => $identifier
+            ]);
 
-                return [
-                    'success' => true,
-                    'message' => 'Compte créé avec succès',
-                    'user' => [
-                        'id' => $user->id,
-                        'telephone' => $user->telephone,
-                        'email' => $user->email,
-                        'nom' => $user->nom,
-                        'prenom' => $user->prenom,
-                        'wallet_id' => $wallet->id
-                    ]
-                ];
-            });
-        } catch (ValidationException $e) {
-            throw $e;
+            return [
+                'success' => true,
+                'message' => 'Compte créé avec succès',
+                'user' => [
+                    'id' => $user->id,
+                    'telephone' => $user->telephone,
+                    'email' => $user->email,
+                    'nom' => $user->nom,
+                    'prenom' => $user->prenom,
+                    'wallet_id' => $wallet->id
+                ]
+            ];
         } catch (\Exception $e) {
             Log::error('Erreur lors de la confirmation d\'enregistrement', [
                 'identifier' => $identifier,
