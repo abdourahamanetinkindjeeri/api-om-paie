@@ -20,8 +20,12 @@ use App\Http\Controllers\PaymentController;
 
 
 Route::prefix('auth')->group(function () {
-    // Inscription
+    // Inscription - Ancien système (à garder pour compatibilité)
     Route::post('/register', [AuthController::class, 'register']);
+
+    // Nouveau système d'inscription avec OTP
+    Route::post('/registration/initiate', [\App\Http\Controllers\RegistrationController::class, 'initiate']);
+    Route::post('/registration/confirm', [\App\Http\Controllers\RegistrationController::class, 'confirm']);
 
     // Connexion
     Route::post('/login', [AuthController::class, 'login']);

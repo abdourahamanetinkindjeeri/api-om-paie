@@ -2,7 +2,15 @@
 
 namespace App\Providers;
 
+use App\Models\Passport\AuthCode;
+use App\Models\Passport\Client;
+use App\Models\Passport\PersonalAccessClient;
+use App\Models\Passport\RefreshToken;
+use App\Models\Passport\Token;
+use App\Services\GmailNotificationService;
+use App\Services\NotificationManager;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +30,18 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Contracts\PaymentServiceInterface::class,
             \App\Services\PaymentService::class
         );
+
+        // Enregistrement du service OTP
+        $this->app->bind(
+            \App\Services\Contracts\OtpServiceInterface::class,
+            \App\Services\OtpService::class
+        );
+
+        // Enregistrement du service d'enregistrement
+        $this->app->bind(
+            \App\Services\Contracts\RegistrationServiceInterface::class,
+            \App\Services\RegistrationService::class
+        );
     }
 
     /**
@@ -30,12 +50,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Configuration des modèles Passport avec UUIDs
-        if (class_exists(\Laravel\Passport\Passport::class)) {
-            \Laravel\Passport\Passport::useClientModel(\App\Models\Passport\Client::class);
-            \Laravel\Passport\Passport::useTokenModel(\App\Models\Passport\Token::class);
-            \Laravel\Passport\Passport::useAuthCodeModel(\App\Models\Passport\AuthCode::class);
-            \Laravel\Passport\Passport::useRefreshTokenModel(\App\Models\Passport\RefreshToken::class);
-            \Laravel\Passport\Passport::usePersonalAccessClientModel(\App\Models\Passport\PersonalAccessClient::class);
+        if (class_exists(Passport::class)) {
+            Passport::useClientModel(Client::class);
+            Passport::useTokenModel(Token::class);
+            Passport::useAuthCodeModel(AuthCode::class);
+            Passport::useRefreshTokenModel(RefreshToken::class);
+            Passport::usePersonalAccessClientModel(PersonalAccessClient::class);
         }
+
+        $this->app->singleton('notification', function ($app) {
+            return new NotificationManager([
+                new GmailNotificationService(),
+                // new TwilioNotificationService(),
+            ]);
+        });
     }
 }
