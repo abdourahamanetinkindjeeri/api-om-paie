@@ -28,7 +28,7 @@ class TransactionLogSeeder extends Seeder
 
             // Logs selon le statut de la transaction
             switch ($transaction->status) {
-                case 'completed':
+                case 'success':
                     TransactionLog::create([
                         'transaction_id' => $transaction->id,
                         'action' => 'processing',
@@ -36,7 +36,7 @@ class TransactionLogSeeder extends Seeder
                     ]);
                     TransactionLog::create([
                         'transaction_id' => $transaction->id,
-                        'action' => 'completed',
+                        'action' => 'success',
                         'description' => 'Transaction terminée avec succès'
                     ]);
                     $logCount += 2;

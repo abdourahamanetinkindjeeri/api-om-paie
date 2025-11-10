@@ -12,17 +12,38 @@ class MongoDBSeeder extends Seeder
         $users = [
             [
                 'telephone' => '221771234567',
-                'nom' => 'Jean',
-                'prenom' => 'Dupont',
-                'email' => 'jean@example.com',
+                'nom' => 'Diallo',
+                'prenom' => 'Amadou',
+                'email' => 'amadou.diallo@example.com',
                 'balance' => 50000,
             ],
             [
                 'telephone' => '221771234568',
-                'nom' => 'Marie',
-                'prenom' => 'Martin',
-                'email' => 'marie@example.com',
+                'nom' => 'Ndiaye',
+                'prenom' => 'Fatou',
+                'email' => 'fatou.ndiaye@example.com',
                 'balance' => 25000,
+            ],
+            [
+                'telephone' => '221771234569',
+                'nom' => 'Ba',
+                'prenom' => 'Ibrahima',
+                'email' => 'ibrahima.ba@example.com',
+                'balance' => 75000,
+            ],
+            [
+                'telephone' => '221771234570',
+                'nom' => 'Cissé',
+                'prenom' => 'Mariama',
+                'email' => 'mariama.cisse@example.com',
+                'balance' => 30000,
+            ],
+            [
+                'telephone' => '221771234571',
+                'nom' => 'Fall',
+                'prenom' => 'Khady',
+                'email' => 'khady.fall@example.com',
+                'balance' => 60000,
             ],
         ];
 

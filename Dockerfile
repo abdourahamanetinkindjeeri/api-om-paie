@@ -1,7 +1,21 @@
 # ==========================
-# Étape 1 : Build des dépendances PHP
+# Étape 1 : Build des dépendances PHP avec extensions MongoDB
 # ==========================
-FROM composer:2.6 AS composer-build
+FROM php:8.3-alpine AS composer-build
+
+# Installer les dépendances système nécessaires
+RUN apk add --no-cache \
+        curl \
+        composer \
+        openssl-dev \
+        autoconf \
+        gcc \
+        g++ \
+        make \
+        libtool \
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
+    && apk del gcc g++ make autoconf libtool
 
 WORKDIR /app
 
@@ -9,8 +23,7 @@ WORKDIR /app
 COPY composer.json composer.lock /app/
 
 # Installer les dépendances sans exécuter les scripts artisan
-# Ignorer temporairement l'extension mongodb car elle sera installée dans l'étape finale
-RUN composer install --no-scripts --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=ext-mongodb
+RUN composer install --no-scripts --optimize-autoloader --no-interaction --prefer-dist
 
 # Copier le reste du code source
 COPY . .
@@ -19,11 +32,11 @@ COPY . .
 RUN composer require "zircote/swagger-php:^4.0" --no-scripts --no-interaction --prefer-dist
 
 # ==========================
-# Étape 2 : Image finale PHP-FPM
+# Étape 2 : Image finale pour development
 # ==========================
-FROM php:8.3-fpm-alpine
+FROM php:8.3-alpine
 
-# Installer dépendances système et extensions compilables
+# Installer dépendances système et extensions PHP
 RUN apk add --no-cache \
         bash \
         freetype-dev \
@@ -42,13 +55,16 @@ RUN apk add --no-cache \
         make \
         libtool \
         curl-dev \
+        libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
         pdo \
+        pdo_mysql \
         bcmath \
         gd \
         pcntl \
         opcache \
+        zip \
     && pecl install mongodb \
     && docker-php-ext-enable mongodb \
     && apk del gcc g++ make autoconf libtool

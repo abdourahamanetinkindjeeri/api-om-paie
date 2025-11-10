@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('oauth_auth_codes', function (Blueprint $table) {
-            $table->string('id', 100)->primary();
-            $table->uuid('user_id')->index();
+            $table->string('id', 100); // Supprimé primary()
+            $table->uuid('user_id'); // Supprimé index()
             $table->uuid('client_id');
             $table->text('scopes')->nullable();
             $table->boolean('revoked');

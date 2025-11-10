@@ -20,7 +20,7 @@ class WalletSeeder extends Seeder
             if ($user->nom === 'Admin') {
                 // Wallet admin avec beaucoup d'argent
                 Wallet::factory()->wealthy()->forUser($user->id)->create();
-            } elseif ($user->telephone === '+221773014729') {
+            } elseif ($user->telephone === '+221773014729' || $user->prenom === 'Amadou') {
                 // Wallet de test avec solde moyen
                 Wallet::factory()->forUser($user->id)->create(['balance' => 50000]);
             } else {
@@ -41,7 +41,7 @@ class WalletSeeder extends Seeder
 
         // Créer un wallet pour chaque marchand actif
         foreach ($merchants as $merchant) {
-            if (str_contains($merchant->name, 'Auchan') || str_contains($merchant->name, 'Entreprise')) {
+            if (str_contains($merchant->name, 'Supermarché') || str_contains($merchant->name, 'Station')) {
                 // Grandes entreprises = gros soldes
                 Wallet::factory()->wealthy()->forMerchant($merchant->id)->create();
             } else {

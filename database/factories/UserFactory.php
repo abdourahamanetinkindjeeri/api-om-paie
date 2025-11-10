@@ -136,7 +136,7 @@ class UserFactory extends Factory
             'prenom' => 'System',
             'telephone' => '+221771234567',
             'email' => 'admin@om-paie.sn',
-            'code' => 'admin123',
+            'code' => '1234', // Code PIN à 4 chiffres
             'type_piece' => 'cni',
             'numero' => '1-234-567-890-123-45',
             'adresse' => 'Dakar, Plateau - Siège Social',

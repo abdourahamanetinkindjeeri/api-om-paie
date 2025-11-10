@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Eloquent\Model;
 
 class Merchant extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected $connection = 'mongodb';
     protected $collection = 'merchants';
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = ['name', 'code', 'telephone', 'email', 'status'];
 

@@ -12,15 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->uuid('id'); // Supprimé primary() et index() pour éviter les contraintes d'espace
             $table->string('nom');
             $table->string('prenom');
             $table->enum('type_piece', ['cni', 'passport', 'permis']);
-            $table->string('numero')->unique(); // numéro de pièce
+            $table->string('numero'); // Supprimé unique() pour éviter les index
             $table->string('adresse');
             $table->string('code'); // PIN hashé
-            $table->string('telephone')->unique();
-            $table->string('email')->nullable()->unique();
+            $table->string('telephone'); // Supprimé unique() pour éviter les index
+            $table->string('email')->nullable(); // Supprimé unique() pour éviter les index
             $table->timestamp('email_verified_at')->nullable();
             $table->integer('login_attempts')->default(0);
             $table->timestamp('blocked_until')->nullable();
@@ -28,8 +28,7 @@ return new class extends Migration
             $table->rememberToken();
             $table->timestamps();
 
-            $table->index('telephone');
-            $table->index('email');
+            // Supprimé tous les index pour économiser l'espace disque
         });
     }
 

@@ -14,42 +14,42 @@ class MerchantSeeder extends Seeder
     {
         echo "🚀 Création des marchands...\n";
 
-        // Créer quelques marchands manuellement pour tester
+        // Créer 5 marchands principaux avec noms africains
         $merchants = [
             [
-                'name' => 'Boutique Sandaga - Test',
-                'code' => 'SND001',
+                'name' => 'Boutique Diallo & Fils',
+                'code' => 'DIA001',
                 'telephone' => '+221338901234',
-                'email' => 'sandaga@test.sn',
+                'email' => 'contact@diallofils.sn',
                 'status' => 'active'
             ],
             [
-                'name' => 'Pharmacie Plateau',
+                'name' => 'Pharmacie Aminata Ba',
                 'code' => 'PHA001',
                 'telephone' => '+221775432100',
-                'email' => 'pharmacie.plateau@om-paie.sn',
+                'email' => 'aminata.ba@pharmacie.sn',
                 'status' => 'active'
             ],
             [
-                'name' => 'Auchan Sénégal',
-                'code' => 'AUC001',
+                'name' => 'Supermarché Mamadou Cissé',
+                'code' => 'SUP001',
                 'telephone' => '+221338889999',
-                'email' => 'auchan@senegal.sn',
+                'email' => 'mamadou.cisse@market.sn',
                 'status' => 'active'
             ],
             [
-                'name' => 'Restaurant Teranga',
+                'name' => 'Restaurant Teranga Fatou',
                 'code' => 'RES001',
                 'telephone' => '+221776543210',
-                'email' => 'teranga@restaurant.sn',
+                'email' => 'fatou@teranga.sn',
                 'status' => 'active'
             ],
             [
-                'name' => 'Cyber Café Digital',
-                'code' => 'CYB001',
+                'name' => 'Atelier Couture Khady Fall',
+                'code' => 'COU001',
                 'telephone' => '+221781234567',
-                'email' => null,
-                'status' => 'inactive'
+                'email' => 'khady.fall@couture.sn',
+                'status' => 'active'
             ]
         ];
 

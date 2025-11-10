@@ -12,10 +12,8 @@ class TransactionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Pour MongoDB, on va d'abord créer quelques utilisateurs et wallets de test
-        $this->createTestUsersAndWallets();
-
-        $wallets = Wallet::all();
+        // Utiliser les wallets existants créés par WalletSeeder (pas besoin d'en créer de nouveaux)
+        $wallets = Wallet::take(5)->get(); // Prendre seulement 5 wallets
 
         foreach ($wallets as $wallet) {
             // Créer quelques transactions de test pour MongoDB
@@ -23,76 +21,25 @@ class TransactionSeeder extends Seeder
         }
 
         $transactionCount = Transaction::count();
-        $completedCount = Transaction::where('status', 'completed')->count();
+        $successCount = Transaction::where('status', 'success')->count();
         $pendingCount = Transaction::where('status', 'pending')->count();
         $failedCount = Transaction::where('status', 'failed')->count();
 
         $this->command->info('✅ ' . $transactionCount . ' transactions créées avec succès');
-        $this->command->info('   - ' . $completedCount . ' terminées');
+        $this->command->info('   - ' . $successCount . ' réussies');
         $this->command->info('   - ' . $pendingCount . ' en attente');
         $this->command->info('   - ' . $failedCount . ' échouées');
     }
 
-    private function createTestUsersAndWallets(): void
-    {
-        // Créer des utilisateurs de test
-        $users = [
-            [
-                'telephone' => '221771234567',
-                'nom' => 'Jean',
-                'prenom' => 'Dupont',
-                'email' => 'jean@example.com',
-                'type_piece' => 'CNI',
-                'numero' => '123456789',
-                'adresse' => 'Dakar, Sénégal'
-            ],
-            [
-                'telephone' => '221771234568',
-                'nom' => 'Marie',
-                'prenom' => 'Martin',
-                'email' => 'marie@example.com',
-                'type_piece' => 'CNI',
-                'numero' => '987654321',
-                'adresse' => 'Thiès, Sénégal'
-            ],
-            [
-                'telephone' => '221773014729',
-                'nom' => 'Pierre',
-                'prenom' => 'Sall',
-                'email' => 'pierre@example.com',
-                'type_piece' => 'CNI',
-                'numero' => '456789123',
-                'adresse' => 'Saint-Louis, Sénégal'
-            ]
-        ];
-
-        foreach ($users as $userData) {
-            $user = User::updateOrCreate(
-                ['telephone' => $userData['telephone']],
-                $userData
-            );
-
-            // Créer un wallet pour chaque utilisateur
-            Wallet::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'user_id' => $user->id,
-                    'balance' => rand(10000, 100000),
-                    'currency' => 'XOF'
-                ]
-            );
-        }
-
-        $this->command->info('✅ Utilisateurs et wallets créés');
-    }
+    // Méthode supprimée - on utilise désormais les wallets créés par WalletSeeder
 
     private function createTestTransactions($wallet): void
     {
         $transactionTypes = ['deposit', 'withdrawal', 'payment', 'transfer'];
-        $statuses = ['completed', 'pending', 'failed'];
+        $statuses = ['pending', 'success', 'failed']; // Correction: 'success' au lieu de 'completed'
 
-        // Créer 3-8 transactions par wallet
-        $count = rand(3, 8);
+        // Créer 2-3 transactions par wallet (5 wallets × 3 = max 15 transactions)
+        $count = rand(2, 3);
 
         for ($i = 0; $i < $count; $i++) {
             Transaction::create([
