@@ -19,12 +19,22 @@ RUN apk add --no-cache \
         gmp-dev \
         zlib-dev
 
+# Installer extensions PHP nécessaires
+RUN docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        bcmath \
+        zip \
+        opcache \
+        dom \
+        tokenizer \
+        fileinfo \
+        session \
+        sodium
+
 # Compiler et activer MongoDB
 RUN pecl install mongodb \
     && docker-php-ext-enable mongodb
-
-# Installer extensions PHP nécessaires
-RUN docker-php-ext-install pdo pdo_mysql bcmath zip opcache
 
 WORKDIR /app
 
@@ -83,6 +93,7 @@ RUN mkdir -p storage/framework/{cache,data,sessions,testing,views} \
 
 USER laravel
 
+# Exposer le port 8000 pour Render
 EXPOSE 8000
 
 # Lancer migrations + Passport + services
