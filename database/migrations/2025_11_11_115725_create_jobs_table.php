@@ -12,15 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('jobs', function (Blueprint $table) {
-            $table->string('queue');
+            $table->bigIncrements('id'); // Clé primaire pour MongoDB
+            $table->string('queue')->index();
             $table->longText('payload');
             $table->unsignedTinyInteger('attempts');
             $table->unsignedInteger('reserved_at')->nullable();
             $table->unsignedInteger('available_at');
             $table->unsignedInteger('created_at');
-
-            // Note: Index sur queue désactivé en raison des limitations d'espace disque MongoDB
-            // Peut être ajouté manuellement plus tard si nécessaire
         });
     }
 

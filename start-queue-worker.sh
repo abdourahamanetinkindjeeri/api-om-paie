@@ -9,21 +9,16 @@ echo "🚀 Démarrage du worker de queue OM-Paie..."
 
 # Fonction pour démarrer le worker
 start_worker() {
-    echo "🔄 Lancement du worker de queue..."
+    echo "🔄 Lancement du worker de queue MongoDB..."
 
     # Vérifier que Laravel est bien configuré (sans cache pour éviter les conflits)
     php artisan config:clear 2>/dev/null || true
 
-    # Démarrer le worker avec une configuration optimisée pour la production
-    php artisan queue:work \
-        --queue=notifications,emails,default \
-        --sleep=3 \
-        --tries=3 \
-        --max-time=3600 \
-        --memory=512 \
-        --timeout=300 \
-        --rest=1 \
-        --verbose
+    # Utiliser notre commande custom pour MongoDB
+    # Note: La commande standard queue:work ne fonctionne pas correctement avec MongoDB
+    php artisan queue:process-mongodb \
+        --queue=notifications \
+        --sleep=3
 }
 
 # Fonction pour surveiller et redémarrer le worker si nécessaire
