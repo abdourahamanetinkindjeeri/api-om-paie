@@ -34,12 +34,11 @@ RUN docker-php-ext-install pcntl
 RUN docker-php-ext-install zip
 RUN docker-php-ext-install opcache
 RUN docker-php-ext-install dom
-RUN docker-php-ext-install tokenizer
 RUN docker-php-ext-install session
 RUN docker-php-ext-install fileinfo
 RUN docker-php-ext-install sodium
 
-# Installer MongoDB séparément
+# Installer MongoDB avec ses dépendances
 RUN pecl install mongodb && docker-php-ext-enable mongodb
 
 # Installer Composer
@@ -91,7 +90,6 @@ RUN apk add --no-cache \
         zip \
         opcache \
         dom \
-        tokenizer \
         session \
         fileinfo \
         sodium \
