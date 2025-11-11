@@ -19,16 +19,6 @@ class TransferController extends Controller
         $this->transferService = $transferService;
     }
 
-    private function successResponse(array $data, string $message = '', int $status = 200): JsonResponse
-    {
-        return response()->json(array_merge(['success' => true, 'message' => $message], $data), $status);
-    }
-
-    private function errorResponse(string $message, int $status = 400, array $extra = []): JsonResponse
-    {
-        return response()->json(array_merge(['success' => false, 'message' => $message], $extra), $status);
-    }
-
     /**
      * @OA\Post(
      *     path="/transfer",
@@ -86,7 +76,7 @@ class TransferController extends Controller
             $sender = auth()->user();
 
             if (!$sender) {
-                return $this->errorResponse('Utilisateur non authentifié', 401);
+                return $this->unauthorizedResponse('Utilisateur non authentifié');
             }
 
             $validated = $request->validated();
@@ -97,11 +87,12 @@ class TransferController extends Controller
                 $validated['montant']
             );
 
-            return $this->successResponse([
-                'data' => new TransferResource($result)
-            ], 'Transfert effectué avec succès');
+            return $this->successResponse(
+                new TransferResource($result),
+                'Transfert effectué avec succès'
+            );
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage());
+            return $this->handleException($e);
         }
     }
 
@@ -151,7 +142,7 @@ class TransferController extends Controller
                 'exists' => $exists
             ], $exists ? 'Numéro trouvé' : 'Numéro non trouvé');
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage());
+            return $this->handleException($e);
         }
     }
 
@@ -191,7 +182,7 @@ class TransferController extends Controller
             $user = auth()->user();
 
             if (!$user) {
-                return $this->errorResponse('Utilisateur non authentifié', 401);
+                return $this->unauthorizedResponse('Utilisateur non authentifié');
             }
 
             $balance = $this->transferService->getUserBalance($user->telephone);
@@ -205,7 +196,7 @@ class TransferController extends Controller
                 'numero' => $user->telephone
             ], 'Solde récupéré avec succès');
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage());
+            return $this->handleException($e);
         }
     }
 
@@ -261,7 +252,7 @@ class TransferController extends Controller
             $user = auth()->user();
 
             if (!$user) {
-                return $this->errorResponse('Utilisateur non authentifié', 401);
+                return $this->unauthorizedResponse('Utilisateur non authentifié');
             }
 
             $page = $request->get('page', 1);
@@ -269,12 +260,13 @@ class TransferController extends Controller
 
             $history = $this->transferService->getUserTransferHistory($user->telephone, $page, $limit);
 
-            return $this->successResponse([
-                'transfers' => TransferHistoryResource::collection(collect($history['transfers'])),
-                'pagination' => $history['pagination']
-            ], 'Historique récupéré avec succès');
+            return $this->paginatedResponse(
+                TransferHistoryResource::collection(collect($history['transfers'])),
+                $history['pagination'],
+                'Historique récupéré avec succès'
+            );
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage());
+            return $this->handleException($e);
         }
     }
 }

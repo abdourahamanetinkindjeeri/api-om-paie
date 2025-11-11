@@ -129,21 +129,21 @@ class AuthController extends Controller
 
         // Utilisateur non trouvé
         if (!$result) {
-            return response()->json([
-                'error' => 'not_found',
-                'message' => 'Utilisateur non trouvé'
-            ], 401);
+            return $this->unauthorizedResponse('Utilisateur non trouvé');
         }
 
         // Cas d'erreur (compte bloqué ou code incorrect)
         if (isset($result['error'])) {
-            $statusCode = match ($result['error']) {
-                'account_blocked' => 423, // Locked
-                'invalid_credentials' => 401, // Unauthorized
-                default => 400
+            return match ($result['error']) {
+                'account_blocked' => $this->accountBlockedResponse(
+                    $result['message'] ?? 'Compte temporairement bloqué',
+                    array_diff_key($result, ['error' => '', 'message' => ''])
+                ),
+                'invalid_credentials' => $this->unauthorizedResponse(
+                    $result['message'] ?? 'Identifiants incorrects'
+                ),
+                default => $this->errorResponse($result['message'] ?? 'Erreur de connexion')
             };
-
-            return response()->json($result, $statusCode);
         }
 
         // Connexion réussie
@@ -182,7 +182,7 @@ class AuthController extends Controller
             $passportService->revokeToken($token);
         }
 
-        return response()->json(['message' => 'Déconnecté avec succès']);
+        return $this->successResponse(null, 'Déconnecté avec succès');
     }
 
     /**
@@ -225,15 +225,14 @@ class AuthController extends Controller
         $user = User::where('telephone', $request->telephone)->first();
 
         if (!$user) {
-            return response()->json(['message' => 'Utilisateur non trouvé'], 404);
+            return $this->notFoundResponse('Utilisateur non trouvé');
         }
 
         $user->resetLoginAttempts();
 
-        return response()->json([
-            'message' => 'Compte débloqué avec succès',
+        return $this->successResponse([
             'user_id' => $user->id
-        ]);
+        ], 'Compte débloqué avec succès');
     }
 
     /**
@@ -260,6 +259,12 @@ class AuthController extends Controller
      */
     public function me()
     {
-        return response()->json(auth()->user());
+        $user = auth()->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse('Utilisateur non authentifié');
+        }
+
+        return $this->successResponse($user, 'Informations utilisateur récupérées');
     }
 }

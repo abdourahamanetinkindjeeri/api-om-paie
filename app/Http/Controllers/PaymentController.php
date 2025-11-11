@@ -79,7 +79,7 @@ class PaymentController extends Controller
         try {
             $user = auth()->user();
             if (!$user) {
-                return response()->json(['success' => false, 'message' => 'Utilisateur non authentifié'], 401);
+                return $this->unauthorizedResponse('Utilisateur non authentifié');
             }
 
             $data = $request->validated();
@@ -92,13 +92,12 @@ class PaymentController extends Controller
                 $metadata
             );
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Paiement effectué avec succès',
-                'data' => new PaymentResource($result)
-            ], 200);
+            return $this->successResponse(
+                new PaymentResource($result),
+                'Paiement effectué avec succès'
+            );
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+            return $this->handleException($e);
         }
     }
 
@@ -153,14 +152,12 @@ class PaymentController extends Controller
             // Ne pas exposer le solde
             if ($merchantInfo) unset($merchantInfo['balance']);
 
-            return response()->json([
-                'success' => true,
+            return $this->successResponse([
                 'exists' => $exists,
-                'message' => $exists ? 'Marchand trouvé' : 'Code marchand non trouvé',
                 'merchant' => $merchantInfo
-            ], 200);
+            ], $exists ? 'Marchand trouvé' : 'Code marchand non trouvé');
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+            return $this->handleException($e);
         }
     }
 
@@ -212,14 +209,14 @@ class PaymentController extends Controller
             $merchantInfo = $this->paymentService->getMerchantInfo($request->code_marchand);
 
             if (!$merchantInfo) {
-                return response()->json(['success' => false, 'message' => 'Marchand non trouvé'], 404);
+                return $this->notFoundResponse('Marchand non trouvé');
             }
 
             unset($merchantInfo['balance']); // ne pas exposer le solde
 
-            return response()->json(['success' => true, 'merchant' => $merchantInfo], 200);
+            return $this->successResponse(['merchant' => $merchantInfo]);
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+            return $this->handleException($e);
         }
     }
 
@@ -270,11 +267,7 @@ class PaymentController extends Controller
             $user = auth()->user() ?? auth('api')->user();
 
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Utilisateur non authentifié',
-                    'debug' => 'Auth guard: ' . config('auth.defaults.guard')
-                ], 401);
+                return $this->unauthorizedResponse('Utilisateur non authentifié');
             }
 
             $page = max(1, (int) $request->query('page', 1));
@@ -284,25 +277,15 @@ class PaymentController extends Controller
 
             // Vérifier si l'historique est une collection vide
             if (is_countable($history) && count($history) === 0) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Aucun paiement trouvé',
-                    'data' => []
-                ], 200);
+                return $this->successResponse([], 'Aucun paiement trouvé');
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Historique des paiements récupéré avec succès',
-                'data' => TransactionHistoryResource::collection($history)
-            ], 200);
+            return $this->successResponse(
+                TransactionHistoryResource::collection($history),
+                'Historique des paiements récupéré avec succès'
+            );
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération de l\'historique',
-                'error' => $e->getMessage(),
-                'trace' => app()->environment('local') ? $e->getTraceAsString() : null
-            ], 400);
+            return $this->handleException($e, 'Erreur lors de la récupération de l\'historique');
         }
     }
 
@@ -340,10 +323,7 @@ class PaymentController extends Controller
     {
         $request->validate(['code_marchand' => 'required|string']);
         try {
-            return response()->json([
-                'success' => false,
-                'message' => 'Fonctionnalité réservée aux marchands authentifiés'
-            ], 403);
+            return $this->forbiddenResponse('Fonctionnalité réservée aux marchands authentifiés');
 
             // Quand auth marchand implémentée :
             /*
@@ -359,7 +339,7 @@ class PaymentController extends Controller
             ], 200);
             */
         } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+            return $this->handleException($e);
         }
     }
 }
