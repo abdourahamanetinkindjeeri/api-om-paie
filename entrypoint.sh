@@ -46,6 +46,17 @@ echo "✅ Application prête - démarrage du serveur..."
     echo "📚 Génération différée de la documentation..."
     php artisan l5-swagger:generate --no-interaction 2>/dev/null || true
     php artisan route:cache --no-interaction 2>/dev/null || true
+    
+    # Démarrer le worker de queue si nécessaire
+    if [ "$QUEUE_CONNECTION" != "sync" ]; then
+        echo "🔄 Démarrage du worker de queue..."
+        sleep 5
+        ./start-queue-worker.sh 2>&1 | while IFS= read -r line; do
+            echo "[QUEUE] $line"
+        done &
+    else
+        echo "⏭️ Queue en mode sync - worker non démarré"
+    fi
 ) &
 
 exec "$@"
