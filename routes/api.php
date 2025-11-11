@@ -33,6 +33,26 @@ Route::get('/status', function () {
     return response()->json(['status' => 'running']);
 });
 
+// Debug endpoint temporaire pour diagnostiquer les problèmes
+Route::get('/debug/db', function () {
+    try {
+        $userCount = \App\Models\User::count();
+        $testUser = \App\Models\User::where('telephone', '+221771234567')->first();
+        
+        return response()->json([
+            'mongodb_connection' => 'ok',
+            'total_users' => $userCount,
+            'test_user_exists' => $testUser ? true : false,
+            'test_user_id' => $testUser ? $testUser->id : null,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'mongodb_connection' => 'error',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
+
 Route::prefix('auth')->group(function () {
     // Inscription - Ancien système (à garder pour compatibilité)
     Route::post('/register', [AuthController::class, 'register']);
