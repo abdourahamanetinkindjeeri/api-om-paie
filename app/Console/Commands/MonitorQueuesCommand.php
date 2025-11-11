@@ -95,6 +95,7 @@ class MonitorQueuesCommand extends Command
             $this->newLine();
 
             // Détail par queue
+            /** @var \Illuminate\Support\Collection<int, \stdClass> $queues */
             $queues = DB::table('jobs')
                 ->select('queue', DB::raw('count(*) as total'))
                 ->groupBy('queue')
@@ -123,6 +124,7 @@ class MonitorQueuesCommand extends Command
             if ($failedCount > 0) {
                 $this->warn("⚠️ Jobs échoués : " . $failedCount);
 
+                /** @var \Illuminate\Support\Collection<int, \stdClass> $recent */
                 $recent = DB::table('failed_jobs')
                     ->orderBy('failed_at', 'desc')
                     ->limit(3)
