@@ -1,0 +1,162 @@
+# ==========================
+# Dockerfile optimisé pour Render.com
+# ==========================
+FROM php:8.3-fpm-alpine AS composer-build
+
+# Variables d'environnement pour optimiser
+ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV COMPOSER_NO_INTERACTION=1
+
+# Installer les dépendances système de base
+RUN apk update && apk add --no-cache \
+        bash \
+        curl \
+        freetype-dev \
+        libjpeg-turbo-dev \
+        libwebp-dev \
+        libpng-dev \
+        zlib-dev \
+        oniguruma-dev \
+        libxml2-dev \
+        gmp-dev \
+        libzip-dev \
+        openssl-dev \
+        libsodium-dev \
+        autoconf \
+        gcc \
+        g++ \
+        make \
+        libtool \
+        pkgconfig \
+        linux-headers
+
+# Installer les extensions PHP essentielles seulement
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+        bcmath \
+        gd \
+        pcntl \
+        zip \
+        opcache \
+        dom \
+        session \
+        fileinfo \
+        sodium
+
+# Installer MongoDB
+RUN pecl install mongodb && docker-php-ext-enable mongodb
+
+# Installer Composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY composer.json composer.lock /app/
+
+# Installer les dépendances avec optimisations
+RUN composer install \
+    --no-scripts \
+    --no-autoloader \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader
+
+# Copier le code source
+COPY . .
+
+# Finaliser l'autoloader
+RUN composer dump-autoload --optimize --no-interaction
+
+# ==========================
+# Image finale optimisée
+# ==========================
+FROM php:8.3-fpm-alpine
+
+# Installer seulement les dépendances runtime nécessaires
+RUN apk add --no-cache \
+        bash \
+        curl \
+        freetype \
+        libjpeg-turbo \
+        libwebp \
+        libpng \
+        zlib \
+        oniguruma \
+        libxml2 \
+        gmp \
+        libzip \
+        openssl \
+        libsodium \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) \
+        bcmath \
+        gd \
+        pcntl \
+        zip \
+        opcache \
+        dom \
+        session \
+        fileinfo \
+        sodium \
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb
+
+# Configuration PHP optimisée
+RUN { \
+        echo 'opcache.memory_consumption=128'; \
+        echo 'opcache.interned_strings_buffer=8'; \
+        echo 'opcache.max_accelerated_files=4000'; \
+        echo 'opcache.revalidate_freq=2'; \
+        echo 'opcache.fast_shutdown=1'; \
+        echo 'opcache.enable_cli=1'; \
+        echo 'opcache.enable=1'; \
+    } > /usr/local/etc/php/conf.d/opcache.ini
+
+RUN { \
+        echo 'memory_limit=256M'; \
+        echo 'upload_max_filesize=32M'; \
+        echo 'post_max_size=32M'; \
+        echo 'max_execution_time=300'; \
+    } > /usr/local/etc/php/conf.d/custom.ini
+
+# Créer l'utilisateur
+RUN addgroup -g 1000 laravel \
+    && adduser -G laravel -g laravel -s /bin/sh -D laravel
+
+WORKDIR /var/www/html
+
+# Copier l'application avec les bonnes permissions
+COPY --from=composer-build --chown=laravel:laravel /app /var/www/html
+
+# Créer les répertoires nécessaires rapidement
+RUN mkdir -p \
+        storage/framework/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        storage/api-docs \
+        bootstrap/cache \
+        public/storage \
+    && chown -R laravel:laravel storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Copier l'entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Variables d'environnement
+ENV APP_ENV=production
+ENV APP_DEBUG=false
+ENV DB_CONNECTION=mongodb
+
+USER laravel
+
+EXPOSE 8000
+
+# Health check simple
+HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=2 \
+    CMD curl -f http://localhost:8000 || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]

@@ -119,16 +119,15 @@ RUN addgroup -g 1000 laravel \
 # Définir le répertoire de travail
 WORKDIR /var/www/html
 
-# Copier le code depuis l'étape build
-COPY --from=composer-build /app /var/www/html
+# Copier le code depuis l'étape build avec les bonnes permissions
+COPY --from=composer-build --chown=laravel:laravel /app /var/www/html
 
-# Créer les répertoires nécessaires et définir les permissions
+# Créer les répertoires nécessaires rapidement
 RUN mkdir -p storage/framework/{cache,data,sessions,testing,views} \
-    && mkdir -p storage/logs \
-    && mkdir -p storage/api-docs \
-    && mkdir -p bootstrap/cache \
-    && mkdir -p public/storage \
-    && chown -R laravel:laravel /var/www/html \
+    storage/logs \
+    storage/api-docs \
+    bootstrap/cache \
+    public/storage \
     && chmod -R 775 storage bootstrap/cache \
     && chmod -R 755 public
 
@@ -148,12 +147,12 @@ USER laravel
 # Exposer le port 8000
 EXPOSE 8000
 
-# Health check pour vérifier que l'API fonctionne
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+# Health check optimisé pour Render
+HEALTHCHECK --interval=60s --timeout=30s --start-period=180s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
 
-# Commande par défaut
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Commande par défaut optimisée pour Render
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]

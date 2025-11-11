@@ -19,6 +19,19 @@ use App\Http\Controllers\QrCodeController;
 |
 */
 
+// Health check endpoint pour Render
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'timestamp' => now()->toISOString(),
+        'version' => '3.0.0'
+    ]);
+});
+
+// Status endpoint simple
+Route::get('/status', function () {
+    return response()->json(['status' => 'running']);
+});
 
 Route::prefix('auth')->group(function () {
     // Inscription - Ancien système (à garder pour compatibilité)

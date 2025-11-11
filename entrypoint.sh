@@ -2,38 +2,50 @@
 
 echo "🚀 Démarrage de l'application OM-Paie API..."
 
+# Créer le répertoire des vues compilées pour Render
+mkdir -p /tmp/views
+chmod 777 /tmp/views 2>/dev/null || true
+
+# Vérifier les permissions de base
+chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
 # Copier les clés OAuth depuis Render Secret Files si elles existent
 if [ -f /etc/secrets/oauth-private.key ]; then
     echo "📋 Copie de la clé privée OAuth..."
     cp /etc/secrets/oauth-private.key storage/oauth-private.key
+    chmod 600 storage/oauth-private.key
 fi
 
 if [ -f /etc/secrets/oauth-public.key ]; then
     echo "📋 Copie de la clé publique OAuth..."
     cp /etc/secrets/oauth-public.key storage/oauth-public.key
+    chmod 644 storage/oauth-public.key
 fi
 
 # Générer la clé d'application si elle n'existe pas
 if [ -z "$APP_KEY" ]; then
     echo "🔑 Génération de la clé d'application..."
-    php artisan key:generate --force
+    php artisan key:generate --force --no-interaction
 fi
 
-# Configuration du cache et optimisations
-echo "⚡ Configuration du cache..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+# Configuration minimale pour éviter les timeouts
+echo "⚡ Configuration rapide..."
+php artisan config:cache --no-interaction
 
-# Générer la documentation Swagger
-echo "📚 Génération de la documentation Swagger..."
-php artisan l5-swagger:generate
-
-# Créer les clés Passport si elles n'existent pas
+# Créer les clés Passport si elles n'existent pas (en mode non-interactif)
 if [ ! -f storage/oauth-private.key ]; then
-    echo "🔐 Installation de Laravel Passport..."
-    php artisan passport:install --force
+    echo "🔐 Configuration de Laravel Passport..."
+    php artisan passport:keys --force --no-interaction 2>/dev/null || true
 fi
 
 echo "✅ Application prête - démarrage du serveur..."
+
+# Démarrer les tâches en arrière-plan après le serveur
+(
+    sleep 10
+    echo "📚 Génération différée de la documentation..."
+    php artisan l5-swagger:generate --no-interaction 2>/dev/null || true
+    php artisan route:cache --no-interaction 2>/dev/null || true
+) &
+
 exec "$@"
