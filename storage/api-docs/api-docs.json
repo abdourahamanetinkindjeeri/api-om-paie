@@ -29,7 +29,7 @@
                     "Authentication"
                 ],
                 "summary": "Inscription d'un nouvel utilisateur",
-                "description": "Crée un nouveau compte utilisateur avec les informations personnelles",
+                "description": "Crée un nouveau compte utilisateur avec les informations personnelles. Un OTP de bienvenue est envoyé automatiquement par email après inscription réussie.",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
@@ -40,34 +40,61 @@
                                     "nom",
                                     "prenom",
                                     "telephone",
-                                    "code",
-                                    "code_confirmation"
+                                    "type_piece",
+                                    "numero",
+                                    "adresse",
+                                    "email",
+                                    "code"
                                 ],
                                 "properties": {
                                     "nom": {
+                                        "description": "Nom de famille",
                                         "type": "string",
+                                        "maxLength": 100,
                                         "example": "Diop"
                                     },
                                     "prenom": {
+                                        "description": "Prénom",
                                         "type": "string",
+                                        "maxLength": 100,
                                         "example": "Mamadou"
                                     },
                                     "telephone": {
+                                        "description": "Numéro de téléphone sénégalais (+221 suivi de 77/76/78/75/70/71 + 7 chiffres)",
                                         "type": "string",
                                         "example": "+221771234567"
                                     },
-                                    "code": {
+                                    "type_piece": {
+                                        "description": "Type de pièce d'identité",
                                         "type": "string",
-                                        "example": "1234"
+                                        "enum": [
+                                            "cin",
+                                            "passport"
+                                        ],
+                                        "example": "cin"
                                     },
-                                    "code_confirmation": {
+                                    "numero": {
+                                        "description": "Numéro de pièce d'identité (13-14 caractères alphanumériques)",
                                         "type": "string",
-                                        "example": "1234"
+                                        "example": "A1234567890123"
+                                    },
+                                    "adresse": {
+                                        "description": "Adresse complète",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Dakar, Sénégal"
                                     },
                                     "email": {
+                                        "description": "Adresse email unique",
                                         "type": "string",
                                         "format": "email",
-                                        "example": "mamadou@example.com"
+                                        "example": "test.devghost@gmail.com"
+                                    },
+                                    "code": {
+                                        "description": "Code PIN à 4 chiffres",
+                                        "type": "string",
+                                        "pattern": "^[0-9]{4}$",
+                                        "example": "1234"
                                     }
                                 },
                                 "type": "object"
@@ -77,7 +104,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Inscription réussie",
+                        "description": "Inscription réussie - Un OTP de bienvenue sera envoyé automatiquement",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -87,25 +114,48 @@
                                                 "user": {
                                                     "properties": {
                                                         "id": {
-                                                            "type": "string"
+                                                            "type": "string",
+                                                            "example": "a054cb85-a834-4f71-bb18-360fd2ae205a"
                                                         },
                                                         "nom": {
-                                                            "type": "string"
+                                                            "type": "string",
+                                                            "example": "Diop"
                                                         },
                                                         "prenom": {
-                                                            "type": "string"
+                                                            "type": "string",
+                                                            "example": "Mamadou"
+                                                        },
+                                                        "type_piece": {
+                                                            "type": "string",
+                                                            "example": "cin"
+                                                        },
+                                                        "numero": {
+                                                            "type": "string",
+                                                            "example": "A1234567890123"
+                                                        },
+                                                        "adresse": {
+                                                            "type": "string",
+                                                            "example": "Dakar, Sénégal"
                                                         },
                                                         "telephone": {
-                                                            "type": "string"
+                                                            "type": "string",
+                                                            "example": "+221771234567"
                                                         },
                                                         "email": {
-                                                            "type": "string"
+                                                            "type": "string",
+                                                            "example": "test.devghost@gmail.com"
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string",
+                                                            "format": "date-time",
+                                                            "example": "2025-11-11T11:28:42.312000Z"
                                                         }
                                                     },
                                                     "type": "object"
                                                 },
-                                                "access_token": {
-                                                    "type": "string"
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0b2tlbl9pZCI6ImEwNT..."
                                                 },
                                                 "token_type": {
                                                     "type": "string",
@@ -121,15 +171,47 @@
                         }
                     },
                     "422": {
-                        "description": "Erreur de validation",
+                        "description": "Erreur de validation des données",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
                                         "message": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "example": "Erreur de validation des données"
+                                        },
+                                        "error_code": {
+                                            "type": "string",
+                                            "example": "validation_error"
                                         },
                                         "errors": {
+                                            "properties": {
+                                                "telephone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Le téléphone doit être un numéro sénégalais valide (+221XXXXXXXXX)."
+                                                    }
+                                                },
+                                                "email": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Un compte existe déjà avec cet email"
+                                                    }
+                                                },
+                                                "type_piece": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "The selected type piece is invalid."
+                                                    }
+                                                }
+                                            },
                                             "type": "object"
                                         }
                                     },

@@ -17,44 +17,56 @@ class AuthController extends Controller
      * @OA\Post(
      *     path="/auth/register",
      *     summary="Inscription d'un nouvel utilisateur",
-     *     description="Crée un nouveau compte utilisateur avec les informations personnelles",
+     *     description="Crée un nouveau compte utilisateur avec les informations personnelles. Un OTP de bienvenue est envoyé automatiquement par email après inscription réussie.",
      *     operationId="register",
      *     tags={"Authentication"},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"nom", "prenom", "telephone", "code", "code_confirmation"},
-     *             @OA\Property(property="nom", type="string", example="Diop"),
-     *             @OA\Property(property="prenom", type="string", example="Mamadou"),
-     *             @OA\Property(property="telephone", type="string", example="+221771234567"),
-     *             @OA\Property(property="code", type="string", example="1234"),
-     *             @OA\Property(property="code_confirmation", type="string", example="1234"),
-     *             @OA\Property(property="email", type="string", format="email", example="mamadou@example.com")
+     *             required={"nom", "prenom", "telephone", "type_piece", "numero", "adresse", "email", "code"},
+     *             @OA\Property(property="nom", type="string", maxLength=100, example="Diop", description="Nom de famille"),
+     *             @OA\Property(property="prenom", type="string", maxLength=100, example="Mamadou", description="Prénom"),
+     *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Numéro de téléphone sénégalais (+221 suivi de 77/76/78/75/70/71 + 7 chiffres)"),
+     *             @OA\Property(property="type_piece", type="string", enum={"cin", "passport"}, example="cin", description="Type de pièce d'identité"),
+     *             @OA\Property(property="numero", type="string", example="A1234567890123", description="Numéro de pièce d'identité (13-14 caractères alphanumériques)"),
+     *             @OA\Property(property="adresse", type="string", maxLength=255, example="Dakar, Sénégal", description="Adresse complète"),
+     *             @OA\Property(property="email", type="string", format="email", example="dev.testghost@gmail.com", description="Adresse email unique"),
+     *             @OA\Property(property="code", type="string", pattern="^[0-9]{4}$", example="1234", description="Code PIN à 4 chiffres")
      *         )
      *     ),
      *     @OA\Response(
      *         response=201,
-     *         description="Inscription réussie",
+     *         description="Inscription réussie - Un OTP de bienvenue sera envoyé automatiquement",
      *         @OA\JsonContent(
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string"),
-     *                     @OA\Property(property="nom", type="string"),
-     *                     @OA\Property(property="prenom", type="string"),
-     *                     @OA\Property(property="telephone", type="string"),
-     *                     @OA\Property(property="email", type="string")
+     *                     @OA\Property(property="id", type="string", example="a054cb85-a834-4f71-bb18-360fd2ae205a"),
+     *                     @OA\Property(property="nom", type="string", example="Diop"),
+     *                     @OA\Property(property="prenom", type="string", example="Mamadou"),
+     *                     @OA\Property(property="type_piece", type="string", example="cin"),
+     *                     @OA\Property(property="numero", type="string", example="A1234567890123"),
+     *                     @OA\Property(property="adresse", type="string", example="Dakar, Sénégal"),
+     *                     @OA\Property(property="telephone", type="string", example="+221771234567"),
+     *                     @OA\Property(property="email", type="string", example="test.devghost@gmail.com"),
+     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2025-11-11T11:28:42.312000Z")
      *                 ),
-     *                 @OA\Property(property="access_token", type="string"),
+     *                 @OA\Property(property="token", type="string", example="eyJ0b2tlbl9pZCI6ImEwNT..."),
      *                 @OA\Property(property="token_type", type="string", example="Bearer")
      *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=422,
-     *         description="Erreur de validation",
+     *         description="Erreur de validation des données",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="errors", type="object")
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Erreur de validation des données"),
+     *             @OA\Property(property="error_code", type="string", example="validation_error"),
+     *             @OA\Property(property="errors", type="object",
+     *                 @OA\Property(property="telephone", type="array", @OA\Items(type="string", example="Le téléphone doit être un numéro sénégalais valide (+221XXXXXXXXX).")),
+     *                 @OA\Property(property="email", type="array", @OA\Items(type="string", example="Un compte existe déjà avec cet email")),
+     *                 @OA\Property(property="type_piece", type="array", @OA\Items(type="string", example="The selected type piece is invalid."))
+     *             )
      *         )
      *     )
      * )
@@ -64,7 +76,11 @@ class AuthController extends Controller
         $user = $this->auth->register($request->validated());
         $token = $user->createToken('auth_token')->accessToken;
 
-        return new AuthResource($user,'');
+        // Envoyer un OTP de bienvenue de manière asynchrone
+        $identifier = $user->email ?: $user->telephone;
+        \App\Jobs\SendWelcomeOtpJob::dispatch($user->id, $identifier);
+
+        return new AuthResource($user, $token);
     }
 
     /**
