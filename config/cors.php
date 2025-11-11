@@ -19,7 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+
+    'allowed_origins' => [
+        'http://localhost:8080',
+        'http://127.0.0.1:8000',
+        'https://tinkin-transfer.onrender.com',
+    ],
 
     'allowed_origins_patterns' => [],
 
