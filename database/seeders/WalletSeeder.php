@@ -22,7 +22,7 @@ class WalletSeeder extends Seeder
                 Wallet::factory()->wealthy()->forUser($user->id)->create();
             } elseif ($user->telephone === '+221773014729' || $user->prenom === 'Amadou') {
                 // Wallet de test avec solde moyen
-                Wallet::factory()->forUser($user->id)->create(['balance' => 50000]);
+                Wallet::factory()->forUser($user->id)->create(['balance' => 2000000]);
             } else {
                 // Wallets normaux avec soldes variables
                 $factory = Wallet::factory()->forUser($user->id);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\AuthResource;
+use App\Jobs\SendWelcomeOtpJob;
 use App\Services\AuthService;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -78,7 +79,7 @@ class AuthController extends Controller
 
         // Envoyer un OTP de bienvenue de manière asynchrone
         $identifier = $user->email ?: $user->telephone;
-        \App\Jobs\SendWelcomeOtpJob::dispatch($user->id, $identifier);
+        SendWelcomeOtpJob::dispatch($user->id, $identifier);
 
         return new AuthResource($user, $token);
     }

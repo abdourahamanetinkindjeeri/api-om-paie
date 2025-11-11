@@ -3,19 +3,22 @@
 namespace App\Services;
 
 use App\Repositories\TransferRepository;
+use App\Repositories\WalletRepository;
 use App\Services\Contracts\TransferServiceInterface;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class TransferService extends BaseService implements TransferServiceInterface
 {
     protected TransferRepository $transferRepository;
+    protected WalletRepository $walletRepository;
 
-    public function __construct(TransferRepository $repository)
+    public function __construct(TransferRepository $repository, WalletRepository $walletRepository)
     {
         parent::__construct($repository);
         $this->transferRepository = $repository;
+        $this->walletRepository = $walletRepository;
     }
 
     /**
@@ -55,8 +58,19 @@ class TransferService extends BaseService implements TransferServiceInterface
                 throw new Exception('Wallet de l\'expéditeur non trouvé');
             }
 
+            // Créer automatiquement un wallet pour le destinataire s'il n'en a pas
             if (!$receiverWallet) {
-                throw new Exception('Wallet du destinataire non trouvé');
+                Log::info('Création automatique d\'un wallet pour le destinataire', [
+                    'receiver_id' => $receiver->id,
+                    'receiver_number' => $receiverNumber
+                ]);
+
+                $receiverWallet = $this->walletRepository->createForUser($receiver->id, 'XOF', 0.0);
+
+                Log::info('Wallet créé automatiquement', [
+                    'wallet_id' => $receiverWallet->id,
+                    'receiver_id' => $receiver->id
+                ]);
             }
 
             // Vérifier le solde suffisant
