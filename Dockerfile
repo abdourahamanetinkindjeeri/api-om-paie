@@ -1,7 +1,49 @@
 # ==========================
 # Étape 1 : Build des dépendances PHP avec Composer et MongoDB
 # ==========================
-FROM composer:2.6 AS composer-build
+FROM php:8.3-fpm-alpine AS composer-build
+
+# Mettre à jour les index des paquets et installer les dépendances système
+RUN apk update && apk add --no-cache \
+        bash \
+        curl \
+        freetype-dev \
+        libjpeg-turbo-dev \
+        libwebp-dev \
+        libpng-dev \
+        zlib-dev \
+        oniguruma-dev \
+        libxml2-dev \
+        gmp-dev \
+        libzip-dev \
+        openssl-dev \
+        libsodium-dev \
+        autoconf \
+        gcc \
+        g++ \
+        make \
+        libtool \
+        pkgconfig \
+        linux-headers
+
+# Installer les extensions PHP une par une pour éviter les conflits
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp
+RUN docker-php-ext-install bcmath
+RUN docker-php-ext-install gd
+RUN docker-php-ext-install pcntl
+RUN docker-php-ext-install zip
+RUN docker-php-ext-install opcache
+RUN docker-php-ext-install dom
+RUN docker-php-ext-install tokenizer
+RUN docker-php-ext-install session
+RUN docker-php-ext-install fileinfo
+RUN docker-php-ext-install sodium
+
+# Installer MongoDB séparément
+RUN pecl install mongodb && docker-php-ext-enable mongodb
+
+# Installer Composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
@@ -40,13 +82,13 @@ RUN apk add --no-cache \
         make \
         libtool \
         pkgconfig \
+        linux-headers \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install \
         bcmath \
         gd \
         pcntl \
         zip \
-        sockets \
         opcache \
         dom \
         tokenizer \
