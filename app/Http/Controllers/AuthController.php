@@ -64,7 +64,7 @@ class AuthController extends Controller
         $user = $this->auth->register($request->validated());
         $token = $user->createToken('auth_token')->accessToken;
 
-        return new AuthResource($user, $token);
+        return new AuthResource($user,'');
     }
 
     /**

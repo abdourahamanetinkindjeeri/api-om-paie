@@ -6,7 +6,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class AuthResource extends JsonResource
 {
-    private string $token;
+    private ?string $token;
 
     public function __construct($resource, string $token)
     {
@@ -21,12 +21,12 @@ class AuthResource extends JsonResource
                 'id'        => $this->id,
                 'nom'       => $this->nom,
                 'prenom'    => $this->prenom,
-                'type_piece'=> $this->type_piece,
+                'type_piece' => $this->type_piece,
                 'numero'    => $this->numero,
                 'adresse'   => $this->adresse,
                 'telephone' => $this->telephone,
                 'email'     => $this->email,
-                'created_at'=> $this->created_at,
+                'created_at' => $this->created_at,
             ],
             'token' => $this->token,
             'token_type' => 'Bearer',
