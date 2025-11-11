@@ -24,17 +24,17 @@ class ProcessQueueJobs extends Command
         $sleep = (int) $this->option('sleep');
 
         $this->info("🔄 Démarrage du worker pour la queue '{$queue}'");
-        
+
         $processed = 0;
-        
+
         do {
             $job = $this->getNextJob($queue);
-            
+
             if ($job) {
                 try {
                     $this->processJob($job, $otpService);
                     $processed++;
-                    
+
                     if ($once) {
                         break;
                     }
@@ -46,16 +46,16 @@ class ProcessQueueJobs extends Command
                     $this->info("Aucun job disponible");
                     break;
                 }
-                
+
                 // Attendre avant de vérifier à nouveau
                 sleep($sleep);
             }
         } while (!$once);
-        
+
         if ($processed > 0) {
             $this->info("✅ {$processed} job(s) traité(s)");
         }
-        
+
         return 0;
     }
 
@@ -75,9 +75,9 @@ class ProcessQueueJobs extends Command
         // Décoder le payload
         $payload = json_decode($job->payload, true);
         $command = unserialize($payload['data']['command']);
-        
+
         $this->line("Processing: {$payload['displayName']}");
-        
+
         // Marquer comme réservé
         DB::connection('mongodb')
             ->table('jobs')
@@ -86,25 +86,25 @@ class ProcessQueueJobs extends Command
                 'reserved_at' => time(),
                 'attempts' => $job->attempts + 1
             ]);
-        
+
         // Exécuter le job
         if ($command instanceof \App\Jobs\SendWelcomeOtpJob) {
             $user = User::find($command->userId);
-            
+
             if (!$user) {
                 $this->warn("⚠️  Utilisateur non trouvé: {$command->userId}");
                 $this->deleteJob($job->id);
                 return;
             }
-            
+
             // Déterminer la destination
-            $emailDest = filter_var($command->identifier, FILTER_VALIDATE_EMAIL) 
-                ? $command->identifier 
+            $emailDest = filter_var($command->identifier, FILTER_VALIDATE_EMAIL)
+                ? $command->identifier
                 : ($user->email ?? 'jeeridev@gmail.com');
-            
+
             // Envoyer l'OTP
             $success = $otpService->generateAndSend($emailDest, 'registration');
-            
+
             if ($success) {
                 $this->info("  ✅ OTP envoyé à {$emailDest}");
                 $this->deleteJob($job->id);
@@ -141,7 +141,7 @@ class ProcessQueueJobs extends Command
                     'exception' => 'Max attempts reached',
                     'failed_at' => now()
                 ]);
-            
+
             $this->deleteJob($job->id);
             $this->error("  ❌ Job échoué après 3 tentatives");
         } else {
@@ -153,7 +153,7 @@ class ProcessQueueJobs extends Command
                     'reserved_at' => null,
                     'available_at' => time() + 60
                 ]);
-            
+
             $this->warn("  ⏱️  Retry dans 60 secondes");
         }
     }

@@ -63,23 +63,27 @@ FORCE_HTTPS=true
 ## ⚠️ Recommandations
 
 ### 1. Environnement de production
+
 ```env
 APP_ENV=local  ⚠️  Devrait être "production"
 APP_DEBUG=true ⚠️  Devrait être "false" en production
 ```
 
 **Action recommandée** : Changer pour la production
+
 ```env
 APP_ENV=production
 APP_DEBUG=false
 ```
 
 ### 2. Log Level
+
 ```env
 LOG_LEVEL=debug  ⚠️  Trop verbeux pour la production
 ```
 
 **Action recommandée** : Utiliser un niveau moins verbeux
+
 ```env
 LOG_LEVEL=warning
 ```
@@ -89,52 +93,58 @@ LOG_LEVEL=warning
 ## 🚀 Ce qui va fonctionner maintenant
 
 ### ✅ Emails OTP
-- La configuration SMTP est correcte
-- Le worker de queue va traiter les jobs avec `queue:process-mongodb`
-- Les emails seront envoyés automatiquement
+
+-   La configuration SMTP est correcte
+-   Le worker de queue va traiter les jobs avec `queue:process-mongodb`
+-   Les emails seront envoyés automatiquement
 
 ### ✅ Queue Worker
-- Le script `start-queue-worker.sh` utilise la commande custom
-- Compatible avec MongoDB
-- Traite la queue `notifications`
+
+-   Le script `start-queue-worker.sh` utilise la commande custom
+-   Compatible avec MongoDB
+-   Traite la queue `notifications`
 
 ### ✅ Transferts
-- Création automatique de wallet pour les destinataires
-- Commande `wallets:create-missing` disponible
+
+-   Création automatique de wallet pour les destinataires
+-   Commande `wallets:create-missing` disponible
 
 ---
 
 ## 🧪 Tests à effectuer après déploiement
 
 1. **Test d'inscription**
-   ```bash
-   curl -X POST https://tinkin-transfer.onrender.com/api/register/initiate \
-     -H "Content-Type: application/json" \
-     -d '{"identifier": "test@example.com"}'
-   ```
-   ✅ Vous devriez recevoir un email OTP
+
+    ```bash
+    curl -X POST https://tinkin-transfer.onrender.com/api/register/initiate \
+      -H "Content-Type: application/json" \
+      -d '{"identifier": "test@example.com"}'
+    ```
+
+    ✅ Vous devriez recevoir un email OTP
 
 2. **Vérifier les logs**
-   - Chercher `GmailNotificationService: Email envoyé avec succès`
-   - Chercher `[QUEUE] 🔄 Lancement du worker de queue MongoDB...`
+
+    - Chercher `GmailNotificationService: Email envoyé avec succès`
+    - Chercher `[QUEUE] 🔄 Lancement du worker de queue MongoDB...`
 
 3. **Vérifier les jobs traités**
-   - Les jobs ne doivent plus s'accumuler dans MongoDB
-   - La collection `jobs` devrait se vider progressivement
+    - Les jobs ne doivent plus s'accumuler dans MongoDB
+    - La collection `jobs` devrait se vider progressivement
 
 ---
 
 ## 📝 Résumé
 
-| Élément | Status | Action requise |
-|---------|--------|----------------|
-| MAIL_PASSWORD | ✅ Corrigé | Aucune |
-| Configuration Email | ✅ OK | Aucune |
-| Configuration Queue | ✅ OK | Aucune |
-| Worker MongoDB | ✅ OK | Déjà déployé |
-| APP_ENV | ⚠️ local | Changer en "production" |
-| APP_DEBUG | ⚠️ true | Changer en "false" |
-| LOG_LEVEL | ⚠️ debug | Changer en "warning" |
+| Élément             | Status     | Action requise          |
+| ------------------- | ---------- | ----------------------- |
+| MAIL_PASSWORD       | ✅ Corrigé | Aucune                  |
+| Configuration Email | ✅ OK      | Aucune                  |
+| Configuration Queue | ✅ OK      | Aucune                  |
+| Worker MongoDB      | ✅ OK      | Déjà déployé            |
+| APP_ENV             | ⚠️ local   | Changer en "production" |
+| APP_DEBUG           | ⚠️ true    | Changer en "false"      |
+| LOG_LEVEL           | ⚠️ debug   | Changer en "warning"    |
 
 ---
 
@@ -143,14 +153,15 @@ LOG_LEVEL=warning
 1. ✅ **Configuration actuelle** : Les emails vont fonctionner !
 
 2. 📊 **Optimisations recommandées** :
-   - Mettre `APP_ENV=production`
-   - Mettre `APP_DEBUG=false`
-   - Mettre `LOG_LEVEL=warning`
+
+    - Mettre `APP_ENV=production`
+    - Mettre `APP_DEBUG=false`
+    - Mettre `LOG_LEVEL=warning`
 
 3. 🔄 **Après déploiement** :
-   - Tester l'inscription avec email
-   - Vérifier que les OTP arrivent
-   - Surveiller les logs pour confirmer le traitement des jobs
+    - Tester l'inscription avec email
+    - Vérifier que les OTP arrivent
+    - Surveiller les logs pour confirmer le traitement des jobs
 
 ---
 
@@ -158,7 +169,7 @@ LOG_LEVEL=warning
 
 **Votre configuration est maintenant correcte pour l'envoi d'emails !**
 
-Le problème principal (`MAIL_PASSWORD` mal formaté) a été résolu. 
+Le problème principal (`MAIL_PASSWORD` mal formaté) a été résolu.
 Le worker de queue est configuré pour MongoDB et va traiter les jobs automatiquement.
 
 🎉 **Les emails OTP vont maintenant être envoyés correctement sur Render !**
