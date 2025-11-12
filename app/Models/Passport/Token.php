@@ -22,12 +22,15 @@ class Token extends Moloquent
         'scopes',
         'revoked',
         'expires_at',
+        'refresh_token_hash',
+        'refresh_expires_at',
     ];
 
     protected $casts = [
         'scopes' => 'array',
         'revoked' => 'boolean',
         'expires_at' => 'datetime',
+        'refresh_expires_at' => 'datetime',
     ];
 
     public function client()

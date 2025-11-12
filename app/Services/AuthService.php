@@ -50,10 +50,13 @@ class AuthService
         $tokenResult = $user->createToken('auth_token');
 
         return [
-            'user'         => $user,
-            'access_token' => $tokenResult->accessToken,
-            'token_type'   => 'Bearer',
-            'expires_at'   => $tokenResult->token->expires_at,
+            'user'                 => $user,
+            'access_token'         => $tokenResult->accessToken,
+            'token_type'           => 'Bearer',
+            'expires_at'           => $tokenResult->token->expires_at,
+            'expires_in'           => 15 * 60, // 15 minutes
+            'refresh_token'        => $tokenResult->refreshToken ?? null,
+            'refresh_expires_at'   => $tokenResult->refresh_expires_at ?? null,
         ];
     }
 

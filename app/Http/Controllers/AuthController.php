@@ -166,7 +166,15 @@ class AuthController extends Controller
         }
 
         // Connexion réussie
-        return new AuthResource($result['user'], $result['access_token']);
+        return $this->successResponse([
+            'user' => $result['user'],
+            'access_token' => $result['access_token'],
+            'token_type' => 'Bearer',
+            'expires_at' => $result['expires_at'] ?? null,
+            'expires_in' => $result['expires_in'] ?? (15 * 60),
+            'refresh_token' => $result['refresh_token'] ?? null,
+            'refresh_expires_at' => $result['refresh_expires_at'] ?? null,
+        ], 'Connexion réussie');
     }
 
     /**
@@ -202,6 +210,68 @@ class AuthController extends Controller
         }
 
         return $this->successResponse(null, 'Déconnecté avec succès');
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/auth/refresh",
+     *     summary="Rafraîchir le jeton d'accès",
+     *     description="Retourne un nouveau access_token (15 minutes) et un refresh_token rotaté (30 jours).",
+     *     operationId="refreshToken",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"refresh_token"},
+     *             @OA\Property(property="refresh_token", type="string", example="eyJ..."),
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Token rafraîchi",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Token rafraîchi"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(property="access_token", type="string"),
+     *                 @OA\Property(property="token_type", type="string", example="Bearer"),
+     *                 @OA\Property(property="expires_at", type="string", format="date-time"),
+     *                 @OA\Property(property="expires_in", type="integer", example=900),
+     *                 @OA\Property(property="refresh_token", type="string"),
+     *                 @OA\Property(property="refresh_expires_at", type="string", format="date-time"),
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Refresh token invalide ou expiré",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
+     */
+    public function refresh(Request $request)
+    {
+        $request->validate([
+            'refresh_token' => ['required', 'string'],
+        ]);
+
+        $passportService = app(\App\Services\MongoPassportService::class);
+        $refreshed = $passportService->refreshAccessToken($request->input('refresh_token'));
+
+        if (!$refreshed) {
+            return $this->unauthorizedResponse('Refresh token invalide ou expiré');
+        }
+
+        return $this->successResponse([
+            'user' => $refreshed['user'],
+            'access_token' => $refreshed['access_token'],
+            'token_type' => 'Bearer',
+            'expires_at' => $refreshed['expires_at'],
+            'expires_in' => $refreshed['expires_in'],
+            'refresh_token' => $refreshed['refresh_token'],
+            'refresh_expires_at' => $refreshed['refresh_expires_at'],
+        ], 'Token rafraîchi');
     }
 
     /**

@@ -16,6 +16,13 @@ class MongoPassportService
         // Utiliser un ID de client fixe pour simplifier
         $clientId = '9e974ca6-da07-4217-9a2d-ac5c780eab17'; // ID du client créé précédemment
 
+        // Access token: 15 minutes
+        $accessExpiresAt = Carbon::now()->addMinutes(15);
+
+        // Refresh token: 30 jours (valeur retournée en clair, stockée en hash)
+        $refreshTokenPlain = rtrim(strtr(base64_encode(random_bytes(48)), '+/', '-_'), '=');
+        $refreshExpiresAt = Carbon::now()->addDays(30);
+
         // Créer le token - laisser HasUuids générer l'ID automatiquement
         $token = new Token([
             'user_id' => $user->id,
@@ -23,7 +30,9 @@ class MongoPassportService
             'name' => $name,
             'scopes' => $scopes,
             'revoked' => false,
-            'expires_at' => Carbon::now()->addYear(), // Token expire dans 1 an
+            'expires_at' => $accessExpiresAt,
+            'refresh_token_hash' => hash('sha256', $refreshTokenPlain),
+            'refresh_expires_at' => $refreshExpiresAt,
         ]);
         $token->save();
 
@@ -34,12 +43,14 @@ class MongoPassportService
             'client_id' => $clientId,
             'scopes' => $scopes,
             'issued_at' => now()->timestamp,
-            'expires_at' => $token->expires_at->timestamp,
+            'expires_at' => $accessExpiresAt->timestamp,
         ]));
 
         return (object) [
             'accessToken' => $accessToken,
             'token' => $token,
+            'refreshToken' => $refreshTokenPlain,
+            'refresh_expires_at' => $refreshExpiresAt,
         ];
     }
 
@@ -104,10 +115,80 @@ class MongoPassportService
         $token = $this->validateToken($accessToken);
 
         if ($token) {
-            $token->update(['revoked' => true]);
+            $token->update([
+                'revoked' => true,
+                'refresh_expires_at' => now(),
+                'refresh_token_hash' => null,
+            ]);
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Rafraîchir l'access token à partir d'un refresh token valide.
+     * - Rotation du refresh token (nouvelle valeur retournée)
+     * - Prolonge l'expiration de l'access token à 15 minutes
+     * - Prolonge le refresh token de 30 jours
+     *
+     * @return array|null
+     */
+    public function refreshAccessToken(string $refreshToken)
+    {
+        try {
+            $hash = hash('sha256', $refreshToken);
+
+            /** @var \App\Models\Passport\Token|null $token */
+            $token = Token::where('refresh_token_hash', $hash)
+                ->where('revoked', false)
+                ->where('refresh_expires_at', '>', now())
+                ->first();
+
+            if (!$token) {
+                return null;
+            }
+
+            /** @var \App\Models\User|null $user */
+            $user = User::find($token->user_id);
+            if (!$user) {
+                return null;
+            }
+
+            $clientId = $token->client_id;
+
+            // Nouvelle expiration d'access token (15 min)
+            $accessExpiresAt = Carbon::now()->addMinutes(15);
+
+            // Rotation du refresh token (30 jours)
+            $newRefreshToken = rtrim(strtr(base64_encode(random_bytes(48)), '+/', '-_'), '=');
+            $refreshExpiresAt = Carbon::now()->addDays(30);
+
+            $token->expires_at = $accessExpiresAt;
+            $token->refresh_token_hash = hash('sha256', $newRefreshToken);
+            $token->refresh_expires_at = $refreshExpiresAt;
+            $token->save();
+
+            // Re-générer l'access token encodé
+            $accessToken = base64_encode(json_encode([
+                'token_id' => $token->id,
+                'user_id' => $user->id,
+                'client_id' => $clientId,
+                'scopes' => $token->scopes ?? [],
+                'issued_at' => now()->timestamp,
+                'expires_at' => $accessExpiresAt->timestamp,
+            ]));
+
+            return [
+                'user' => $user,
+                'access_token' => $accessToken,
+                'expires_at' => $accessExpiresAt,
+                'expires_in' => 15 * 60,
+                'refresh_token' => $newRefreshToken,
+                'refresh_expires_at' => $refreshExpiresAt,
+            ];
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }
