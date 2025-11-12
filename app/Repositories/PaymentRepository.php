@@ -108,4 +108,20 @@ class PaymentRepository extends BaseRepository
 
         return $query->paginate($limit, ['*'], 'page', $page);
     }
+
+    /**
+     * Trouver une transaction par référence externe pour un utilisateur
+     */
+    public function findTransactionByExternalReference(string $externalRef, string $userId): ?Transaction
+    {
+        $wallet = $this->getUserWallet($userId);
+        if (!$wallet) return null;
+
+        return $this->model->newQuery()
+            ->where('wallet_id', $wallet->id)
+            ->where('meta.reference_externe', $externalRef)
+            ->where('type', 'payment')
+            ->where('amount', '<', 0) // Transactions de débit uniquement
+            ->first();
+    }
 }

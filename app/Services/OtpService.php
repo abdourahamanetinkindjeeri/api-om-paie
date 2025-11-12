@@ -12,7 +12,7 @@ class OtpService implements OtpServiceInterface
     /**
      * Génère et envoie un code OTP
      */
-    public function generateAndSend(string $identifier, string $purpose = 'registration'): bool
+    public function generateAndSend(string $identifier, string $purpose = 'registration'): array
     {
         try {
             // Générer le code OTP
@@ -25,8 +25,8 @@ class OtpService implements OtpServiceInterface
             $isPhone = preg_match('/^\+[1-9]\d{1,14}$/', $identifier);
 
             if ($isPhone) {
-                // Pour les téléphones, toujours envoyer par SMS via Twilio
-                Notification::send($identifier, $message);
+                // Pour les téléphones, toujours envoyer par SMS via Twilio (synchrone pour OTP)
+                Notification::sendSync($identifier, $message);
 
                 Log::info("Code OTP envoyé par SMS", [
                     'identifier' => $identifier,
@@ -34,8 +34,8 @@ class OtpService implements OtpServiceInterface
                     'environment' => config('app.env')
                 ]);
             } else {
-                // Pour les emails, envoyer directement
-                Notification::send($identifier, $message);
+                // Pour les emails, envoyer directement (synchrone pour OTP)
+                Notification::sendSync($identifier, $message);
 
                 Log::info("Code OTP envoyé par email", [
                     'identifier' => $identifier,
@@ -44,13 +44,18 @@ class OtpService implements OtpServiceInterface
             }
 
             if (app()->environment(['local','testing'])) {
-    Log::debug('OTP généré', [
-        'identifier' => $identifier,
-        'purpose' => $purpose,
-        'code' => $code
-    ]);
-}
-return true;
+                Log::debug('OTP généré', [
+                    'identifier' => $identifier,
+                    'purpose' => $purpose,
+                    'code' => $code
+                ]);
+            }
+
+            return [
+                'success' => true,
+                'code' => $code,
+                'expires_in_minutes' => OtpCode::DEFAULT_EXPIRY_MINUTES
+            ];
         } catch (\Exception $e) {
             Log::error("Erreur lors de l'envoi du code OTP", [
                 'identifier' => $identifier,
@@ -58,7 +63,10 @@ return true;
                 'error' => $e->getMessage()
             ]);
 
-            return false;
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 
@@ -97,12 +105,9 @@ return true;
      */
     private function buildMessage(string $code, string $purpose): string
     {
-        $messages = [
-            'registration' => "Votre code de vérification OM-Paie est: {$code}. Ce code à 6 chiffres expire dans 5 minutes.",
-            'password_reset' => "Votre code de réinitialisation OM-Paie est: {$code}. Ce code à 6 chiffres expire dans 5 minutes.",
-            'login' => "Votre code de connexion OM-Paie est: {$code}. Ce code à 6 chiffres expire dans 5 minutes.",
-        ];
+        $messages = config('ompaie.otp.messages', []);
+        $template = $messages[$purpose] ?? "Votre code OM-Paie est: {code}. Ce code à 6 chiffres expire dans 5 minutes.";
 
-        return $messages[$purpose] ?? "Votre code OM-Paie est: {$code}. Ce code à 6 chiffres expire dans 5 minutes.";
+        return str_replace('{code}', $code, $template);
     }
 }

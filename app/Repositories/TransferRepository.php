@@ -81,4 +81,23 @@ class TransferRepository extends BaseRepository
 
         return $query->paginate($limit, ['*'], 'page', $page);
     }
+
+    /**
+     * Trouver une transaction par référence externe pour un numéro d'expéditeur
+     */
+    public function findTransactionByExternalReference(string $externalRef, string $senderNumber): ?Transaction
+    {
+        $sender = $this->findUserByNumber($senderNumber);
+        if (!$sender) return null;
+
+        $wallet = $this->getUserWallet($sender->id);
+        if (!$wallet) return null;
+
+        return $this->model->newQuery()
+            ->where('wallet_id', $wallet->id)
+            ->where('meta.reference_externe', $externalRef)
+            ->where('type', 'transfer')
+            ->where('amount', '<', 0) // Transactions de débit uniquement
+            ->first();
+    }
 }

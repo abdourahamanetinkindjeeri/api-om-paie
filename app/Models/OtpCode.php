@@ -39,7 +39,7 @@ class OtpCode extends Model
     public const PURPOSE_PASSWORD_RESET = 'password_reset';
     public const PURPOSE_LOGIN = 'login';
 
-    public const DEFAULT_EXPIRY_MINUTES = 5;
+    public const DEFAULT_EXPIRY_MINUTES = 5; // Fallback, use config('ompaie.otp.default_expiry_minutes')
     public const DEFAULT_MAX_ATTEMPTS = 3;
 
     /**
@@ -97,7 +97,7 @@ class OtpCode extends Model
     /**
      * Génère un nouveau code OTP
      */
-    public static function generate(string $identifier, string $purpose = self::PURPOSE_REGISTRATION, int $expiryMinutes = self::DEFAULT_EXPIRY_MINUTES): string
+    public static function generate(string $identifier, string $purpose = self::PURPOSE_REGISTRATION, int $expiryMinutes = null): string
     {
         // Invalider les anciens codes pour cet identifiant et ce purpose
         static::where('identifier', $identifier)
@@ -113,7 +113,7 @@ class OtpCode extends Model
             'identifier' => $identifier,
             'code' => $code,
             'purpose' => $purpose,
-            'expires_at' => now()->addMinutes($expiryMinutes),
+            'expires_at' => now()->addMinutes($expiryMinutes ?? config('ompaie.otp.default_expiry_minutes', self::DEFAULT_EXPIRY_MINUTES)),
             'attempts' => 0,
             'max_attempts' => self::DEFAULT_MAX_ATTEMPTS
         ]);

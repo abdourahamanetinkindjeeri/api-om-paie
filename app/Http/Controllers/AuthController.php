@@ -48,6 +48,7 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="Code OTP envoyé avec succès"),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="identifier", type="string", example="+221771234567"),
+     *                 @OA\Property(property="code_otp", type="string", example="123456", description="Code OTP généré (inclus pour les tests)"),
      *                 @OA\Property(property="expires_in_minutes", type="integer", example=10)
      *             )
      *         )
@@ -75,6 +76,7 @@ class AuthController extends Controller
 
             return $this->successResponse([
                 'identifier' => $result['identifier'],
+                'code_otp' => $result['code_otp'],
                 'expires_in_minutes' => $result['expires_in_minutes']
             ], $result['message']);
         } catch (\Exception $e) {
@@ -103,17 +105,14 @@ class AuthController extends Controller
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Connexion réussie",
+     *         description="Code PIN correct - OTP envoyé pour finaliser la connexion",
      *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Code OTP envoyé pour la connexion"),
      *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string"),
-     *                     @OA\Property(property="nom", type="string"),
-     *                     @OA\Property(property="prenom", type="string"),
-     *                     @OA\Property(property="telephone", type="string")
-     *                 ),
-     *                 @OA\Property(property="access_token", type="string"),
-     *                 @OA\Property(property="token_type", type="string", example="Bearer")
+     *                 @OA\Property(property="telephone", type="string", example="+221771234567"),
+     *                 @OA\Property(property="code_otp", type="string", example="123456", description="Code OTP généré (inclus pour les tests)"),
+     *                 @OA\Property(property="expires_in_minutes", type="integer", example=5)
      *             )
      *         )
      *     ),
@@ -141,7 +140,7 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        $result = $this->auth->login(
+        $result = $this->auth->initiateLogin(
             $validated['telephone'],
             $validated['code']
         );
@@ -161,11 +160,109 @@ class AuthController extends Controller
                 'invalid_credentials' => $this->unauthorizedResponse(
                     $result['message'] ?? 'Identifiants incorrects'
                 ),
+                'otp_send_failed' => $this->errorResponse(
+                    $result['message'] ?? 'Erreur lors de l\'envoi du code OTP'
+                ),
                 default => $this->errorResponse($result['message'] ?? 'Erreur de connexion')
             };
         }
 
-        // Connexion réussie
+        // Code PIN correct, OTP envoyé
+        return $this->successResponse([
+            'telephone' => $result['telephone'],
+            'expires_in_minutes' => $result['expires_in_minutes'],
+            'code_otp' => $result['code_otp'] ?? null
+        ], $result['message']);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/auth/login/confirm",
+     *     summary="Confirmer la connexion avec le code OTP (2FA)",
+     *     description="Valide le code OTP envoyé lors de la première étape de connexion et retourne le token d'accès pour l'utilisateur authentifié",
+     *     operationId="confirmLogin",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"telephone", "otp_code"},
+     *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Numéro de téléphone utilisé pour la connexion"),
+     *             @OA\Property(property="otp_code", type="string", example="123456", description="Code OTP à 6 chiffres reçu par SMS")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Connexion réussie - Token d'accès retourné",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Connexion réussie"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", type="object",
+     *                     @OA\Property(property="id", type="string", example="507f1f77bcf86cd799439011"),
+     *                     @OA\Property(property="nom", type="string", example="Diop"),
+     *                     @OA\Property(property="prenom", type="string", example="Mamadou"),
+     *                     @OA\Property(property="telephone", type="string", example="+221771234567")
+     *                 ),
+     *                 @OA\Property(property="access_token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."),
+     *                 @OA\Property(property="token_type", type="string", example="Bearer"),
+     *                 @OA\Property(property="expires_at", type="string", format="date-time", example="2025-11-12T21:43:36.000000Z"),
+     *                 @OA\Property(property="expires_in", type="integer", example=900, description="Durée de validité en secondes (15 minutes)"),
+     *                 @OA\Property(property="refresh_token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."),
+     *                 @OA\Property(property="refresh_expires_at", type="string", format="date-time", example="2025-11-19T20:43:36.000000Z")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Code OTP invalide ou utilisateur non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Code OTP invalide ou expiré")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Données de requête invalides",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Erreur de validation des données"),
+     *             @OA\Property(property="error_code", type="string", example="validation_error"),
+     *             @OA\Property(property="errors", type="object",
+     *                 @OA\Property(property="telephone", type="array", @OA\Items(type="string", example="Le téléphone est requis.")),
+     *                 @OA\Property(property="otp_code", type="array", @OA\Items(type="string", example="Le code OTP doit contenir 6 chiffres."))
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function confirmLogin(Request $request)
+    {
+        $request->validate([
+            'telephone' => ['required', 'string'],
+            'otp_code' => ['required', 'string', 'size:6']
+        ]);
+
+        $result = $this->auth->confirmLogin(
+            $request->telephone,
+            $request->otp_code
+        );
+
+        // Utilisateur non trouvé
+        if (!$result) {
+            return $this->unauthorizedResponse('Utilisateur non trouvé');
+        }
+
+        // Cas d'erreur
+        if (isset($result['error'])) {
+            return match ($result['error']) {
+                'invalid_otp' => $this->unauthorizedResponse(
+                    $result['message'] ?? 'Code OTP invalide'
+                ),
+                default => $this->errorResponse($result['message'] ?? 'Erreur de connexion')
+            };
+        }
+
+        // Connexion réussie avec 2FA
         return $this->successResponse([
             'user' => $result['user'],
             'access_token' => $result['access_token'],
@@ -399,10 +496,11 @@ class AuthController extends Controller
      *     ),
      *     @OA\Response(
      *         response=400,
-     *         description="Code OTP invalide ou session expirée",
+     *         description="Code OTP invalide, session expirée ou erreur de base de données",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Code OTP invalide ou expiré")
+     *             @OA\Property(property="message", type="string", example="Code OTP invalide ou expiré"),
+     *             @OA\Property(property="message", type="string", example="Erreur lors de la création du compte: Transaction numbers are only allowed on a replica set member or mongos")
      *         )
      *     ),
      *     @OA\Response(

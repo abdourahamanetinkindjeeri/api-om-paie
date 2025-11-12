@@ -12,11 +12,20 @@ class UserSeeder extends Seeder
         // Utilisateur Admin système
         User::factory()->admin()->create();
 
+        // Utilisateur de test spécifique pour debugging
+        User::factory()->create([
+            'nom' => 'Test',
+            'prenom' => 'User',
+            'telephone' => '+221781465554',
+            'code' => '1234',
+            'email' => 'test.user@om-paie.sn'
+        ]);
+
         // Utilisateurs de test avec codes spécifiques
         User::factory()->withCode('1234')->create([
             'nom' => 'Touré',
             'prenom' => 'Amadou',
-            'telephone' => '+221773014729',
+            'telephone' => '+221771001010',
             'email' => 'amadou.toure@om-paie.sn'
         ]);
 

@@ -115,6 +115,28 @@ return [
         'allowed_id_types' => ['cin', 'passport'],
     ],
 
+    'otp' => [
+        /*
+        |--------------------------------------------------------------------------
+        | Messages OTP
+        |--------------------------------------------------------------------------
+        |
+        */
+        'messages' => [
+            'registration' => "Votre code de vérification OM-Paie est: {code}. Ce code à 6 chiffres expire dans 5 minutes.",
+            'password_reset' => "Votre code de réinitialisation OM-Paie est: {code}. Ce code à 6 chiffres expire dans 5 minutes.",
+            'login' => "Votre code de connexion OM-Paie est: {code}. Ce code à 6 chiffres expire dans 5 minutes.",
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Durée d'expiration par défaut (minutes)
+        |--------------------------------------------------------------------------
+        |
+        */
+        'default_expiry_minutes' => 5,
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Cache

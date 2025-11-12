@@ -38,13 +38,13 @@ class RegistrationService implements RegistrationServiceInterface
             Cache::put($cacheKey, $userData, now()->addMinutes(10));
 
             // Envoyer le code OTP
-            $otpSent = $this->otpService->generateAndSend(
+            $otpResult = $this->otpService->generateAndSend(
                 $identifier,
                 OtpCode::PURPOSE_REGISTRATION
             );
 
-            if (!$otpSent) {
-                throw new \Exception('Impossible d\'envoyer le code OTP');
+            if (!$otpResult['success']) {
+                throw new \Exception('Impossible d\'envoyer le code OTP: ' . ($otpResult['error'] ?? 'Erreur inconnue'));
             }
 
             Log::info('Processus d\'enregistrement initié', [
@@ -55,7 +55,8 @@ class RegistrationService implements RegistrationServiceInterface
                 'success' => true,
                 'message' => 'Code OTP envoyé avec succès',
                 'identifier' => $identifier,
-                'expires_in_minutes' => OtpCode::DEFAULT_EXPIRY_MINUTES
+                'code_otp' => $otpResult['code'],
+                'expires_in_minutes' => $otpResult['expires_in_minutes']
             ];
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'initiation de l\'enregistrement', [
@@ -89,7 +90,7 @@ class RegistrationService implements RegistrationServiceInterface
             // Fusionner avec les nouvelles données si fournies
             $finalUserData = array_merge($cachedUserData, $userData);
 
-            // Créer l'utilisateur (sans transaction car MongoDB simple ne les supporte pas)
+            // Créer l'utilisateur
             $user = $this->userRepository->create([
                 'telephone' => $finalUserData['telephone'] ?? null,
                 'email' => $finalUserData['email'] ?? null,
@@ -101,8 +102,14 @@ class RegistrationService implements RegistrationServiceInterface
                 'code' => $finalUserData['code'] ?? '1234', // Code par défaut
             ]);
 
-            // Créer le wallet associé
-            $wallet = $this->walletRepository->createForUser($user->id);
+            try {
+                // Créer le wallet associé
+                $wallet = $this->walletRepository->createForUser($user->id);
+            } catch (\Exception $walletException) {
+                // En cas d'erreur lors de la création du wallet, supprimer l'utilisateur créé
+                $user->delete();
+                throw new \Exception('Erreur lors de la création du wallet: ' . $walletException->getMessage());
+            }
 
             // Supprimer les données temporaires du cache
             $cacheKey = 'registration_data_' . md5($identifier);

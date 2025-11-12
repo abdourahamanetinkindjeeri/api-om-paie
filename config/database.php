@@ -86,11 +86,13 @@ return [
             'database' => env('DB_DATABASE', 'forge'),
             'username' => env('DB_USERNAME'),
             'password' => env('DB_PASSWORD'),
-            'options' => [
+            'options' => array_filter([
                 'database' => env('DB_AUTHENTICATION_DATABASE', 'admin'), // required with Mongo 3+
                 'retryWrites' => true,
                 'w' => 'majority',
-            ],
+                'replicaSet' => env('MONGODB_REPLICA_SET'),
+                'readPreference' => env('MONGODB_READ_PREFERENCE', 'primaryPreferred'),
+            ]),
         ],
 
         'sqlsrv' => [

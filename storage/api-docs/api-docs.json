@@ -212,36 +212,33 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Connexion réussie",
+                        "description": "Code PIN correct - OTP envoyé pour finaliser la connexion",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Code OTP envoyé pour la connexion"
+                                        },
                                         "data": {
                                             "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string"
-                                                        },
-                                                        "nom": {
-                                                            "type": "string"
-                                                        },
-                                                        "prenom": {
-                                                            "type": "string"
-                                                        },
-                                                        "telephone": {
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                },
-                                                "access_token": {
-                                                    "type": "string"
-                                                },
-                                                "token_type": {
+                                                "telephone": {
                                                     "type": "string",
-                                                    "example": "Bearer"
+                                                    "example": "+221771234567"
+                                                },
+                                                "code_otp": {
+                                                    "description": "Code OTP généré (inclus pour les tests)",
+                                                    "type": "string",
+                                                    "example": "123456"
+                                                },
+                                                "expires_in_minutes": {
+                                                    "type": "integer",
+                                                    "example": 5
                                                 }
                                             },
                                             "type": "object"
@@ -299,6 +296,180 @@
                 }
             }
         },
+        "/auth/login/confirm": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Confirmer la connexion avec le code OTP (2FA)",
+                "description": "Valide le code OTP envoyé lors de la première étape de connexion et retourne le token d'accès pour l'utilisateur authentifié",
+                "operationId": "confirmLogin",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "telephone",
+                                    "otp_code"
+                                ],
+                                "properties": {
+                                    "telephone": {
+                                        "description": "Numéro de téléphone utilisé pour la connexion",
+                                        "type": "string",
+                                        "example": "+221771234567"
+                                    },
+                                    "otp_code": {
+                                        "description": "Code OTP à 6 chiffres reçu par SMS",
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connexion réussie - Token d'accès retourné",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Connexion réussie"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "example": "507f1f77bcf86cd799439011"
+                                                        },
+                                                        "nom": {
+                                                            "type": "string",
+                                                            "example": "Diop"
+                                                        },
+                                                        "prenom": {
+                                                            "type": "string",
+                                                            "example": "Mamadou"
+                                                        },
+                                                        "telephone": {
+                                                            "type": "string",
+                                                            "example": "+221771234567"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "access_token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                },
+                                                "expires_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2025-11-12T21:43:36.000000Z"
+                                                },
+                                                "expires_in": {
+                                                    "description": "Durée de validité en secondes (15 minutes)",
+                                                    "type": "integer",
+                                                    "example": 900
+                                                },
+                                                "refresh_token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+                                                },
+                                                "refresh_expires_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2025-11-19T20:43:36.000000Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Code OTP invalide ou utilisateur non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Code OTP invalide ou expiré"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Données de requête invalides",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Erreur de validation des données"
+                                        },
+                                        "error_code": {
+                                            "type": "string",
+                                            "example": "validation_error"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "telephone": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Le téléphone est requis."
+                                                    }
+                                                },
+                                                "otp_code": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Le code OTP doit contenir 6 chiffres."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/logout": {
             "post": {
                 "tags": [
@@ -346,6 +517,97 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Rafraîchir le jeton d'accès",
+                "description": "Retourne un nouveau access_token (15 minutes) et un refresh_token rotaté (30 jours).",
+                "operationId": "refreshToken",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "refresh_token"
+                                ],
+                                "properties": {
+                                    "refresh_token": {
+                                        "type": "string",
+                                        "example": "eyJ..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token rafraîchi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Token rafraîchi"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "$ref": "#/components/schemas/User"
+                                                },
+                                                "access_token": {
+                                                    "type": "string"
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                },
+                                                "expires_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "expires_in": {
+                                                    "type": "integer",
+                                                    "example": 900
+                                                },
+                                                "refresh_token": {
+                                                    "type": "string"
+                                                },
+                                                "refresh_expires_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Refresh token invalide ou expiré",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/auth/unlock-account": {

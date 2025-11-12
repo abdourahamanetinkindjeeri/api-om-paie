@@ -40,6 +40,12 @@ class TransferRequest extends FormRequest
                 "min:{$minAmount}",
                 "max:{$maxAmount}",
                 "regex:/^\d+(\.\d{1,{$amountDecimals}})?$/" // Validation des décimales
+            ],
+            'reference_externe' => [
+                'nullable',
+                'string',
+                'max:100',
+                'regex:/^[a-zA-Z0-9_-]+$/' // Format alphanumérique avec tirets et underscores
             ]
         ];
     }
@@ -61,7 +67,9 @@ class TransferRequest extends FormRequest
             'montant.numeric' => 'Le montant doit être un nombre.',
             'montant.min' => "Le montant minimum est de {$minAmount} FCFA.",
             'montant.max' => "Le montant maximum autorisé est de " . number_format($maxAmount, 0, ',', ' ') . " FCFA.",
-            'montant.regex' => "Le montant ne peut avoir plus de {$amountDecimals} décimales."
+            'montant.regex' => "Le montant ne peut avoir plus de {$amountDecimals} décimales.",
+            'reference_externe.max' => 'La référence externe ne peut pas dépasser 100 caractères.',
+            'reference_externe.regex' => 'La référence externe ne peut contenir que des lettres, chiffres, tirets et underscores.'
         ];
     }
 
@@ -72,7 +80,8 @@ class TransferRequest extends FormRequest
     {
         return [
             'telephone' => 'numéro de téléphone',
-            'montant' => 'montant'
+            'montant' => 'montant',
+            'reference_externe' => 'référence externe'
         ];
     }
 

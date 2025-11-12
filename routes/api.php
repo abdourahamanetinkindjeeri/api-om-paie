@@ -33,14 +33,17 @@ Route::get('/status', function () {
     return response()->json(['status' => 'running']);
 });
 
-Route::prefix('auth')->group(function () {
+Route::middleware('throttle:10,1')->prefix('auth')->group(function () {
     // Inscription - OTP flow: init via /register, confirm via /confirmation, resend via /resend
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/confirmation', [AuthController::class, 'confirm']);
     Route::post('/resend', [AuthController::class, 'resendOtp']);
 
-    // Connexion
+    // Connexion (2FA: étape 1 - vérifier PIN et envoyer OTP)
     Route::post('/login', [AuthController::class, 'login']);
+
+    // Confirmer la connexion (2FA: étape 2 - vérifier OTP)
+    Route::post('/login/confirm', [AuthController::class, 'confirmLogin']);
 
     // Rafraîchir le token (public)
     Route::post('/refresh', [AuthController::class, 'refresh']);
@@ -56,7 +59,7 @@ Route::prefix('auth')->group(function () {
 });
 
 // Routes pour les transferts (protégées par authentification)
-Route::middleware('mongo.passport')->prefix('transfer')->group(function () {
+Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('transfer')->group(function () {
     // Effectuer un transfert
     Route::post('/', [TransferController::class, 'transfer']);
 
@@ -71,7 +74,7 @@ Route::middleware('mongo.passport')->prefix('transfer')->group(function () {
 });
 
 // Routes pour les paiements marchands (protégées par authentification)
-Route::middleware('mongo.passport')->prefix('payment')->group(function () {
+Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('payment')->group(function () {
     // Effectuer un paiement vers un marchand
     Route::post('/', [PaymentController::class, 'payMerchant']);
 
@@ -89,7 +92,7 @@ Route::middleware('mongo.passport')->prefix('payment')->group(function () {
 });
 
 // Routes pour l'historique unifié (protégées par authentification)
-Route::middleware('mongo.passport')->prefix('history')->group(function () {
+Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('history')->group(function () {
     // Historique complet (paiements + transferts) trié par date décroissante
     Route::get('/', [\App\Http\Controllers\HistoryController::class, 'getUserHistory']);
 
@@ -104,7 +107,7 @@ Route::middleware('mongo.passport')->prefix('history')->group(function () {
 });
 
 // Routes pour les QR codes (protégées par authentification)
-Route::middleware('mongo.passport')->prefix('user')->group(function () {
+Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('user')->group(function () {
     // Générer le QR code de l'utilisateur connecté
     Route::get('/qrcode', [QrCodeController::class, 'generateUserQrCode']);
 
@@ -113,7 +116,7 @@ Route::middleware('mongo.passport')->prefix('user')->group(function () {
 });
 
 // Route pour scanner un QR code (protégée par authentification)
-Route::middleware('mongo.passport')->post('/qrcode/scan', [QrCodeController::class, 'scanQrCode']);
+Route::middleware(['mongo.passport', 'throttle:60,1'])->post('/qrcode/scan', [QrCodeController::class, 'scanQrCode']);
 
 // Route pour le health check (Docker)
 Route::get('/health', function () {

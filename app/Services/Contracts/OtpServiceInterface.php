@@ -7,7 +7,7 @@ interface OtpServiceInterface
     /**
      * Génère et envoie un code OTP
      */
-    public function generateAndSend(string $identifier, string $purpose = 'registration'): bool;
+    public function generateAndSend(string $identifier, string $purpose = 'registration'): array;
 
     /**
      * Vérifie un code OTP

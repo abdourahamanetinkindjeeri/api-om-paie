@@ -19,10 +19,10 @@ class WalletSeeder extends Seeder
         foreach ($users as $user) {
             if ($user->nom === 'Admin') {
                 // Wallet admin avec beaucoup d'argent
-                Wallet::factory()->wealthy()->forUser($user->id)->create();
-            } elseif ($user->telephone === '+221773014729' || $user->prenom === 'Amadou') {
+                Wallet::factory()->wealthy()->forUser($user->id)->create(['balance' => 2000000]);
+            } elseif ($user->telephone === '+221771001010' || $user->prenom === 'Amadou') {
                 // Wallet de test avec solde moyen
-                Wallet::factory()->forUser($user->id)->create(['balance' => 2000000]);
+                Wallet::factory()->forUser($user->id)->create(['balance' => 200]);
             } else {
                 // Wallets normaux avec soldes variables
                 $factory = Wallet::factory()->forUser($user->id);

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\OtpCode;
 use App\Repositories\UserRepository;
 use App\Models\User;
+use App\Services\Contracts\OtpServiceInterface;
 use Illuminate\Support\Facades\Hash;
 
 class AuthService
@@ -16,7 +18,7 @@ class AuthService
         return $this->users->create($data);
     }
 
-    public function login(string $telephone, string $password): ?array
+    public function initiateLogin(string $telephone, string $password): ?array
     {
         $user = $this->users->findByTelephone($telephone);
 
@@ -44,7 +46,50 @@ class AuthService
             ];
         }
 
-        // Connexion réussie
+        // Code PIN correct, envoyer OTP pour 2FA
+        $otpService = app(OtpServiceInterface::class);
+        $otpSent = $otpService->generateAndSend($telephone, OtpCode::PURPOSE_LOGIN);
+
+        if (!$otpSent) {
+            return [
+                'error' => 'otp_send_failed',
+                'message' => 'Impossible d\'envoyer le code OTP',
+            ];
+        }
+
+        // Récupérer le code OTP généré pour le retourner dans la réponse (pour les tests)
+        $otpCode = OtpCode::where('identifier', $telephone)
+            ->where('purpose', OtpCode::PURPOSE_LOGIN)
+            ->whereNull('used_at')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        return [
+            'success' => true,
+            'message' => 'Code OTP envoyé pour la connexion',
+            'telephone' => $telephone,
+            'code_otp' => $otpCode ? $otpCode->code : null,
+            'expires_in_minutes' => \App\Models\OtpCode::DEFAULT_EXPIRY_MINUTES
+        ];
+    }
+
+    public function confirmLogin(string $telephone, string $otpCode): ?array
+    {
+        $user = $this->users->findByTelephone($telephone);
+
+        if (!$user) {
+            return null;
+        }
+
+        $otpService = app(\App\Services\Contracts\OtpServiceInterface::class);
+        if (!$otpService->verify($telephone, $otpCode, \App\Models\OtpCode::PURPOSE_LOGIN)) {
+            return [
+                'error' => 'invalid_otp',
+                'message' => 'Code OTP invalide ou expiré',
+            ];
+        }
+
+        // Connexion réussie avec 2FA
         $user->resetLoginAttempts();
 
         $tokenResult = $user->createToken('auth_token');
