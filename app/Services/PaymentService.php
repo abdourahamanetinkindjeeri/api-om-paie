@@ -6,6 +6,8 @@ use App\Repositories\PaymentRepository;
 use App\Services\Contracts\PaymentServiceInterface;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Facades\Notification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Exception;
 
@@ -91,6 +93,35 @@ class PaymentService extends BaseService implements PaymentServiceInterface
 
             $this->paymentRepository->updateWalletBalance($userWallet->id, $newUserBalance);
             $this->paymentRepository->updateWalletBalance($merchantWallet->id, $newMerchantBalance);
+
+            // Notification SMS à l'utilisateur (nouveau solde)
+            try {
+                if (!empty($user->telephone)) {
+                    $fmtAmount = number_format($amount, 0, ',', ' ');
+                    $fmtBalance = number_format($newUserBalance, 0, ',', ' ');
+                    $message = "OM-Paie: Paiement de {$fmtAmount} FCFA chez {$merchant->name}. Nouveau solde: {$fmtBalance} FCFA. Ref: {$paymentRef}";
+                    Notification::send($user->telephone, $message);
+
+                    Log::info('Notification paiement envoyée (SMS)', [
+                        'user_id' => $user->id ?? null,
+                        'telephone' => $user->telephone,
+                        'payment_ref' => $paymentRef,
+                        'amount' => $amount,
+                        'new_balance' => $newUserBalance
+                    ]);
+                } else {
+                    Log::warning('Téléphone utilisateur manquant - notification paiement non envoyée', [
+                        'user_id' => $user->id ?? null,
+                        'payment_ref' => $paymentRef
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Erreur envoi SMS notification paiement', [
+                    'user_id' => $user->id ?? null,
+                    'telephone' => $user->telephone ?? null,
+                    'error' => $e->getMessage()
+                ]);
+            }
 
             return [
                 'success' => true,

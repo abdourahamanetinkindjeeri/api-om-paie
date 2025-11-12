@@ -7,6 +7,7 @@ use App\Repositories\WalletRepository;
 use App\Services\Contracts\TransferServiceInterface;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Facades\Notification;
 use Exception;
 
 class TransferService extends BaseService implements TransferServiceInterface
@@ -119,6 +120,63 @@ class TransferService extends BaseService implements TransferServiceInterface
 
             $this->transferRepository->updateWalletBalance($senderWallet->id, $newSenderBalance);
             $this->transferRepository->updateWalletBalance($receiverWallet->id, $newReceiverBalance);
+
+            // Notifications SMS (nouveau solde)
+            try {
+                if (!empty($sender->telephone)) {
+                    $fmtAmount = number_format($amount, 0, ',', ' ');
+                    $fmtSenderBalance = number_format($newSenderBalance, 0, ',', ' ');
+                    $senderMsg = "OM-Paie: Transfert de {$fmtAmount} FCFA vers {$receiverNumber}. Nouveau solde: {$fmtSenderBalance} FCFA. Ref: {$transferRef}";
+                    Notification::send($sender->telephone, $senderMsg);
+
+                    Log::info('Notification transfert envoyée (SMS - expéditeur)', [
+                        'sender_id' => $sender->id ?? null,
+                        'telephone' => $sender->telephone,
+                        'transfer_ref' => $transferRef,
+                        'amount' => $amount,
+                        'new_balance' => $newSenderBalance
+                    ]);
+                } else {
+                    Log::warning('Téléphone expéditeur manquant - notification transfert non envoyée', [
+                        'sender_id' => $sender->id ?? null,
+                        'transfer_ref' => $transferRef
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Erreur envoi SMS notification transfert (expéditeur)', [
+                    'sender_id' => $sender->id ?? null,
+                    'telephone' => $sender->telephone ?? null,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            try {
+                if (!empty($receiver->telephone)) {
+                    $fmtAmount = number_format($amount, 0, ',', ' ');
+                    $fmtReceiverBalance = number_format($newReceiverBalance, 0, ',', ' ');
+                    $receiverMsg = "OM-Paie: Vous avez reçu {$fmtAmount} FCFA de {$senderNumber}. Nouveau solde: {$fmtReceiverBalance} FCFA. Ref: {$transferRef}";
+                    Notification::send($receiver->telephone, $receiverMsg);
+
+                    Log::info('Notification transfert envoyée (SMS - destinataire)', [
+                        'receiver_id' => $receiver->id ?? null,
+                        'telephone' => $receiver->telephone,
+                        'transfer_ref' => $transferRef,
+                        'amount' => $amount,
+                        'new_balance' => $newReceiverBalance
+                    ]);
+                } else {
+                    Log::warning('Téléphone destinataire manquant - notification transfert non envoyée', [
+                        'receiver_id' => $receiver->id ?? null,
+                        'transfer_ref' => $transferRef
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Erreur envoi SMS notification transfert (destinataire)', [
+                    'receiver_id' => $receiver->id ?? null,
+                    'telephone' => $receiver->telephone ?? null,
+                    'error' => $e->getMessage()
+                ]);
+            }
 
             return [
                 'success' => true,
