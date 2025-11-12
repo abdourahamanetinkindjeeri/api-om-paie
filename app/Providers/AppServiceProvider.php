@@ -9,6 +9,7 @@ use App\Models\Passport\RefreshToken;
 use App\Models\Passport\Token;
 use App\Services\GmailNotificationService;
 use App\Services\NotificationManager;
+use App\Services\TwilioNotificationService;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
 
@@ -67,7 +68,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton('notification', function ($app) {
             return new NotificationManager([
                 new GmailNotificationService(),
-                // new TwilioNotificationService(),
+                new TwilioNotificationService(),
             ]);
         });
     }

@@ -77,9 +77,32 @@ class AuthController extends Controller
         $user = $this->auth->register($request->validated());
         $token = $user->createToken('auth_token')->accessToken;
 
-        // Envoyer un OTP de bienvenue de manière asynchrone
-        $identifier = $user->email ?: $user->telephone;
-        SendWelcomeOtpJob::dispatch($user->id, $identifier);
+        // Envoyer les notifications de bienvenue (synchrone pour éviter les problèmes de queue)
+        try {
+            $otpService = app(\App\Services\Contracts\OtpServiceInterface::class);
+
+            // Envoi par email si disponible
+            if ($user->email) {
+                $otpService->generateAndSend($user->email, 'registration');
+            }
+
+            // Envoi par SMS si disponible
+            if ($user->telephone) {
+                $otpService->generateAndSend($user->telephone, 'registration');
+            }
+
+            \Illuminate\Support\Facades\Log::info('Notifications d\'inscription envoyées', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'telephone' => $user->telephone
+            ]);
+        } catch (\Exception $e) {
+            // Logger l'erreur mais ne pas bloquer l'inscription
+            \Illuminate\Support\Facades\Log::error('Erreur envoi notifications inscription', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
 
         return new AuthResource($user, $token);
     }

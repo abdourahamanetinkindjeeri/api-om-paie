@@ -37,33 +37,52 @@ class SendWelcomeOtpJob implements ShouldQueue
                 return;
             }
 
-            // Déterminer la destination email
-            $emailDestination = $this->getEmailDestination($user);
+            $emailSuccess = false;
+            $smsSuccess = false;
 
-            if (!$emailDestination) {
-                Log::warning('Pas d\'email valide pour OTP', [
-                    'user_id' => $this->userId,
-                    'identifier' => $this->identifier
-                ]);
-                return;
+            // Envoyer par email si disponible
+            $emailDestination = $this->getEmailDestination($user);
+            if ($emailDestination) {
+                $emailSuccess = $otpService->generateAndSend($emailDestination, 'registration');
+
+                if ($emailSuccess) {
+                    Log::info('OTP bienvenue envoyé par email', [
+                        'user_id' => $this->userId,
+                        'email' => $emailDestination
+                    ]);
+                }
             }
 
-            // Envoyer l'OTP directement à l'email
-            $success = $otpService->generateAndSend($emailDestination, 'registration');
+            // Envoyer par SMS si téléphone disponible
+            $phoneDestination = $this->getPhoneDestination($user);
+            if ($phoneDestination) {
+                $smsSuccess = $otpService->generateAndSend($phoneDestination, 'registration');
 
-            if ($success) {
-                Log::info('OTP bienvenue envoyé', [
+                if ($smsSuccess) {
+                    Log::info('OTP bienvenue envoyé par SMS', [
+                        'user_id' => $this->userId,
+                        'telephone' => $phoneDestination
+                    ]);
+                }
+            }
+
+            // Si aucun envoi n'a réussi
+            if (!$emailSuccess && !$smsSuccess) {
+                Log::error('Échec envoi OTP bienvenue sur tous les canaux', [
                     'user_id' => $this->userId,
-                    'email' => $emailDestination
-                ]);
-            } else {
-                Log::error('Échec envoi OTP bienvenue', [
-                    'user_id' => $this->userId
+                    'email_tried' => !empty($emailDestination),
+                    'sms_tried' => !empty($phoneDestination)
                 ]);
 
                 if ($this->attempts() < $this->tries) {
                     $this->release(30);
                 }
+            } else {
+                Log::info('OTP bienvenue - Résumé envoi', [
+                    'user_id' => $this->userId,
+                    'email_success' => $emailSuccess,
+                    'sms_success' => $smsSuccess
+                ]);
             }
         } catch (\Exception $e) {
             Log::error('Erreur job OTP bienvenue', [
@@ -91,9 +110,19 @@ class SendWelcomeOtpJob implements ShouldQueue
             return $user->email;
         }
 
-        // En dev/local, utiliser l'email de test
-        if (config('app.env') !== 'production') {
-            return 'jeeridev@gmail.com';
+        return null;
+    }
+
+    private function getPhoneDestination(User $user): ?string
+    {
+        // Si l'identifier est un téléphone, l'utiliser
+        if (preg_match('/^\+[1-9]\d{1,14}$/', $this->identifier)) {
+            return $this->identifier;
+        }
+
+        // Sinon utiliser le téléphone du user
+        if ($user->telephone && preg_match('/^\+[1-9]\d{1,14}$/', $user->telephone)) {
+            return $user->telephone;
         }
 
         return null;

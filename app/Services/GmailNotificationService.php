@@ -12,6 +12,14 @@ class GmailNotificationService implements NotificationChannelInterface
 {
     public function send(string $to, string $message): bool
     {
+        // Vérifier si c'est une adresse email valide
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            Log::debug("GmailNotificationService: Destination ignorée (pas un email)", [
+                'destinataire' => $to
+            ]);
+            return true; // Retourner true pour ne pas bloquer les autres canaux
+        }
+
         try {
             $username = config('mail.mailers.smtp.username');
             $password = config('mail.mailers.smtp.password');
@@ -56,9 +64,8 @@ class GmailNotificationService implements NotificationChannelInterface
                 'destinataire' => $to,
                 'timestamp' => now()->toDateTimeString()
             ]);
-            
-            return true;
 
+            return true;
         } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
             Log::error("GmailNotificationService: Erreur SMTP Transport", [
                 'destinataire' => $to,

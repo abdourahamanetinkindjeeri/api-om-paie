@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\MongoPassportService;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Eloquent\Model;
@@ -54,6 +55,25 @@ class User extends Model implements AuthenticatableContract
     public function setCodeAttribute($value)
     {
         $this->attributes['code'] = Hash::make($value);
+    }
+
+    /**
+     * Mutateur pour normaliser automatiquement le numéro de téléphone
+     * Ajoute +221 si le numéro commence par 7 ou 3
+     */
+    public function setTelephoneAttribute($value)
+    {
+        if (empty($value)) {
+            $this->attributes['telephone'] = null;
+            return;
+        }
+
+        // Si le numéro commence par 7 ou 3 (numéros sénégalais sans indicatif)
+        if (preg_match('/^[73]\d{8}$/', $value)) {
+            $this->attributes['telephone'] = '+221' . $value;
+        } else {
+            $this->attributes['telephone'] = $value;
+        }
     }
 
     /**
@@ -114,7 +134,7 @@ class User extends Model implements AuthenticatableContract
      */
     public function createToken(string $name = 'Personal Access Token', array $scopes = [])
     {
-        $passportService = app(\App\Services\MongoPassportService::class);
+        $passportService = app(MongoPassportService::class);
         return $passportService->createPersonalAccessToken($this, $name, $scopes);
     }
 

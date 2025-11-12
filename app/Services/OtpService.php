@@ -21,17 +21,27 @@ class OtpService implements OtpServiceInterface
             // Préparer le message
             $message = $this->buildMessage($code, $purpose);
 
-            // Utiliser l'email de test pour les numéros de téléphone en développement
-            $destination = $this->getDestination($identifier);
+            // Déterminer si c'est un numéro de téléphone ou un email
+            $isPhone = preg_match('/^\+[1-9]\d{1,14}$/', $identifier);
 
-            // Envoyer via la facade Notification
-            Notification::send($destination, $message);
+            if ($isPhone) {
+                // Pour les téléphones, toujours envoyer par SMS via Twilio
+                Notification::send($identifier, $message);
 
-            Log::info("Code OTP envoyé", [
-                'identifier' => $identifier,
-                'destination' => $destination,
-                'purpose' => $purpose
-            ]);
+                Log::info("Code OTP envoyé par SMS", [
+                    'identifier' => $identifier,
+                    'purpose' => $purpose,
+                    'environment' => config('app.env')
+                ]);
+            } else {
+                // Pour les emails, envoyer directement
+                Notification::send($identifier, $message);
+
+                Log::info("Code OTP envoyé par email", [
+                    'identifier' => $identifier,
+                    'purpose' => $purpose
+                ]);
+            }
 
             return true;
         } catch (\Exception $e) {
@@ -73,19 +83,6 @@ class OtpService implements OtpServiceInterface
         ]);
 
         return $deleted;
-    }
-
-    /**
-     * Détermine la destination de l'envoi (email de test pour les téléphones en dev)
-     */
-    private function getDestination(string $identifier): string
-    {
-        // Si c'est un numéro de téléphone et qu'on est en développement, utiliser l'email de test
-        if (preg_match('/^\+221[0-9]{9}$/', $identifier) && config('app.env') !== 'production') {
-            return 'jeeridev@gmail.com';
-        }
-
-        return $identifier;
     }
 
     /**
