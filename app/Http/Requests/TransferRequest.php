@@ -23,17 +23,23 @@ class TransferRequest extends FormRequest
      */
     public function rules(): array
     {
+        $minAmount = config('ompaie.transfer.amount.min', 100);
+        $maxAmount = config('ompaie.transfer.amount.max', 2000000);
+        $amountDecimals = config('ompaie.transfer.amount_decimals', 2);
+
         return [
             'telephone' => [
                 'required',
                 'string',
-                new SenegalPhone()
+                new SenegalPhone(),
+                'exists:users,telephone' // Vérifier que le destinataire existe
             ],
             'montant' => [
                 'required',
                 'numeric',
-                'min:100',
-                'max:2000000' // Limite maximale de transfert
+                "min:{$minAmount}",
+                "max:{$maxAmount}",
+                "regex:/^\d+(\.\d{1,{$amountDecimals}})?$/" // Validation des décimales
             ]
         ];
     }
@@ -43,14 +49,30 @@ class TransferRequest extends FormRequest
      */
     public function messages(): array
     {
+        $minAmount = config('ompaie.transfer.amount.min', 100);
+        $maxAmount = config('ompaie.transfer.amount.max', 2000000);
+        $amountDecimals = config('ompaie.transfer.amount_decimals', 2);
+
         return [
-            'numero.required' => 'Le numéro du destinataire est obligatoire.',
-            'numero.string' => 'Le numéro doit être une chaîne de caractères.',
-            'numero.exists' => 'Ce numéro n\'existe pas dans notre système.',
+            'telephone.required' => 'Le numéro du destinataire est obligatoire.',
+            'telephone.string' => 'Le numéro doit être une chaîne de caractères.',
+            'telephone.exists' => 'Ce numéro n\'existe pas dans notre système.',
             'montant.required' => 'Le montant est obligatoire.',
             'montant.numeric' => 'Le montant doit être un nombre.',
-            'montant.min' => 'Le montant minimum est de 1.',
-            'montant.max' => 'Le montant maximum autorisé est de 1,000,000.'
+            'montant.min' => "Le montant minimum est de {$minAmount} FCFA.",
+            'montant.max' => "Le montant maximum autorisé est de " . number_format($maxAmount, 0, ',', ' ') . " FCFA.",
+            'montant.regex' => "Le montant ne peut avoir plus de {$amountDecimals} décimales."
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     */
+    public function attributes(): array
+    {
+        return [
+            'telephone' => 'numéro de téléphone',
+            'montant' => 'montant'
         ];
     }
 

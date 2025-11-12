@@ -28,44 +28,40 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Inscription d'un nouvel utilisateur",
-                "description": "Crée un nouveau compte utilisateur avec les informations personnelles. Un OTP de bienvenue est envoyé automatiquement par email après inscription réussie.",
+                "summary": "Initier l'inscription d'un nouvel utilisateur avec OTP",
+                "description": "Démarre le processus d'inscription en envoyant un code OTP par email ou SMS. Au moins l'un des deux (téléphone ou email) est requis. L'utilisateur devra confirmer le code pour finaliser l'inscription et créer son compte avec wallet.",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "nom",
-                                    "prenom",
-                                    "telephone",
-                                    "type_piece",
-                                    "numero",
-                                    "adresse",
-                                    "email",
-                                    "code"
-                                ],
                                 "properties": {
-                                    "nom": {
-                                        "description": "Nom de famille",
-                                        "type": "string",
-                                        "maxLength": 100,
-                                        "example": "Diop"
-                                    },
-                                    "prenom": {
-                                        "description": "Prénom",
-                                        "type": "string",
-                                        "maxLength": 100,
-                                        "example": "Mamadou"
-                                    },
                                     "telephone": {
-                                        "description": "Numéro de téléphone sénégalais (+221 suivi de 77/76/78/75/70/71 + 7 chiffres)",
+                                        "description": "Numéro de téléphone sénégalais (+221 suivi de 9 chiffres). Optionnel si email fourni",
                                         "type": "string",
                                         "example": "+221771234567"
                                     },
+                                    "email": {
+                                        "description": "Adresse email. Optionnel si téléphone fourni",
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "dev.testghost@gmail.com"
+                                    },
+                                    "nom": {
+                                        "description": "Nom de famille (optionnel)",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Diop"
+                                    },
+                                    "prenom": {
+                                        "description": "Prénom (optionnel)",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Mamadou"
+                                    },
                                     "type_piece": {
-                                        "description": "Type de pièce d'identité",
+                                        "description": "Type de pièce d'identité (optionnel)",
                                         "type": "string",
                                         "enum": [
                                             "cin",
@@ -74,26 +70,19 @@
                                         "example": "cin"
                                     },
                                     "numero": {
-                                        "description": "Numéro de pièce d'identité (13-14 caractères alphanumériques)",
+                                        "description": "Numéro de pièce d'identité (optionnel)",
                                         "type": "string",
                                         "example": "A1234567890123"
                                     },
                                     "adresse": {
-                                        "description": "Adresse complète",
+                                        "description": "Adresse complète (optionnel)",
                                         "type": "string",
-                                        "maxLength": 255,
+                                        "maxLength": 500,
                                         "example": "Dakar, Sénégal"
                                     },
-                                    "email": {
-                                        "description": "Adresse email unique",
-                                        "type": "string",
-                                        "format": "email",
-                                        "example": "test.devghost@gmail.com"
-                                    },
                                     "code": {
-                                        "description": "Code PIN à 4 chiffres",
+                                        "description": "Code PIN choisi par l'utilisateur (optionnel à ce stade)",
                                         "type": "string",
-                                        "pattern": "^[0-9]{4}$",
                                         "example": "1234"
                                     }
                                 },
@@ -103,63 +92,29 @@
                     }
                 },
                 "responses": {
-                    "201": {
-                        "description": "Inscription réussie - Un OTP de bienvenue sera envoyé automatiquement",
+                    "200": {
+                        "description": "Code OTP envoyé avec succès - L'utilisateur doit confirmer pour finaliser l'inscription",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Code OTP envoyé avec succès"
+                                        },
                                         "data": {
                                             "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "example": "a054cb85-a834-4f71-bb18-360fd2ae205a"
-                                                        },
-                                                        "nom": {
-                                                            "type": "string",
-                                                            "example": "Diop"
-                                                        },
-                                                        "prenom": {
-                                                            "type": "string",
-                                                            "example": "Mamadou"
-                                                        },
-                                                        "type_piece": {
-                                                            "type": "string",
-                                                            "example": "cin"
-                                                        },
-                                                        "numero": {
-                                                            "type": "string",
-                                                            "example": "A1234567890123"
-                                                        },
-                                                        "adresse": {
-                                                            "type": "string",
-                                                            "example": "Dakar, Sénégal"
-                                                        },
-                                                        "telephone": {
-                                                            "type": "string",
-                                                            "example": "+221771234567"
-                                                        },
-                                                        "email": {
-                                                            "type": "string",
-                                                            "example": "test.devghost@gmail.com"
-                                                        },
-                                                        "created_at": {
-                                                            "type": "string",
-                                                            "format": "date-time",
-                                                            "example": "2025-11-11T11:28:42.312000Z"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                },
-                                                "token": {
+                                                "identifier": {
                                                     "type": "string",
-                                                    "example": "eyJ0b2tlbl9pZCI6ImEwNT..."
+                                                    "example": "+221771234567"
                                                 },
-                                                "token_type": {
-                                                    "type": "string",
-                                                    "example": "Bearer"
+                                                "expires_in_minutes": {
+                                                    "type": "integer",
+                                                    "example": 10
                                                 }
                                             },
                                             "type": "object"
@@ -498,6 +453,277 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/auth/confirmation": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Confirmer l'inscription avec le code OTP",
+                "description": "Valide le code OTP et crée le compte utilisateur avec son wallet",
+                "operationId": "confirmRegistration",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "telephone",
+                                    "code_otp"
+                                ],
+                                "properties": {
+                                    "telephone": {
+                                        "description": "Téléphone utilisé pour l'inscription",
+                                        "type": "string",
+                                        "example": "+221771234567"
+                                    },
+                                    "code_otp": {
+                                        "description": "Code OTP à 6 chiffres",
+                                        "type": "string",
+                                        "example": "123456"
+                                    },
+                                    "nom": {
+                                        "description": "Nom (optionnel si déjà fourni)",
+                                        "type": "string",
+                                        "example": "Diop"
+                                    },
+                                    "prenom": {
+                                        "description": "Prénom (optionnel si déjà fourni)",
+                                        "type": "string",
+                                        "example": "Mamadou"
+                                    },
+                                    "type_piece": {
+                                        "description": "Type de pièce (optionnel)",
+                                        "type": "string",
+                                        "enum": [
+                                            "cin",
+                                            "passport"
+                                        ],
+                                        "example": "cin"
+                                    },
+                                    "numero": {
+                                        "description": "Numéro de pièce (optionnel)",
+                                        "type": "string",
+                                        "example": "A1234567890123"
+                                    },
+                                    "adresse": {
+                                        "description": "Adresse (optionnel)",
+                                        "type": "string",
+                                        "example": "Dakar"
+                                    },
+                                    "code": {
+                                        "description": "Code PIN (optionnel)",
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Compte créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Compte créé avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "example": "507f1f77bcf86cd799439011"
+                                                        },
+                                                        "telephone": {
+                                                            "type": "string",
+                                                            "example": "+221771234567"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "example": "user@example.com"
+                                                        },
+                                                        "nom": {
+                                                            "type": "string",
+                                                            "example": "Diop"
+                                                        },
+                                                        "prenom": {
+                                                            "type": "string",
+                                                            "example": "Mamadou"
+                                                        },
+                                                        "wallet_id": {
+                                                            "type": "string",
+                                                            "example": "507f1f77bcf86cd799439012"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Code OTP invalide ou session expirée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Code OTP invalide ou expiré"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Session d'enregistrement expirée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Données d'enregistrement expirées. Veuillez recommencer."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/resend": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Renvoyer le code OTP d'inscription",
+                "description": "Renvoie un nouveau code OTP si le précédent a expiré ou n'a pas été reçu",
+                "operationId": "resendOtp",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "identifier"
+                                ],
+                                "properties": {
+                                    "telephone": {
+                                        "description": "Téléphone utilisé pour l'inscription",
+                                        "type": "string",
+                                        "example": "+221771234567"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Code OTP renvoyé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Code OTP renvoyé avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "identifier": {
+                                                    "type": "string",
+                                                    "example": "+221771234567"
+                                                },
+                                                "expires_in_minutes": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Session d'enregistrement expirée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Session d'enregistrement expirée. Veuillez recommencer le processus."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erreur serveur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Erreur lors du renvoi du code OTP"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/payment": {

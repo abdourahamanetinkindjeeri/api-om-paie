@@ -4,55 +4,51 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\LoginRequest;
+use App\Http\Requests\ConfirmRegistrationRequest;
+use App\Http\Requests\ResendOtpRequest;
 use App\Http\Resources\AuthResource;
-use App\Jobs\SendWelcomeOtpJob;
 use App\Services\AuthService;
+use App\Services\Contracts\RegistrationServiceInterface;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
-    public function __construct(private AuthService $auth) {}
+    public function __construct(
+        private AuthService $auth,
+        private RegistrationServiceInterface $registrationService
+    ) {}
 
     /**
      * @OA\Post(
      *     path="/auth/register",
-     *     summary="Inscription d'un nouvel utilisateur",
-     *     description="Crée un nouveau compte utilisateur avec les informations personnelles. Un OTP de bienvenue est envoyé automatiquement par email après inscription réussie.",
+     *     summary="Initier l'inscription d'un nouvel utilisateur avec OTP",
+     *     description="Démarre le processus d'inscription en envoyant un code OTP par email ou SMS. Au moins l'un des deux (téléphone ou email) est requis. L'utilisateur devra confirmer le code pour finaliser l'inscription et créer son compte avec wallet.",
      *     operationId="register",
      *     tags={"Authentication"},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"nom", "prenom", "telephone", "type_piece", "numero", "adresse", "email", "code"},
-     *             @OA\Property(property="nom", type="string", maxLength=100, example="Diop", description="Nom de famille"),
-     *             @OA\Property(property="prenom", type="string", maxLength=100, example="Mamadou", description="Prénom"),
-     *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Numéro de téléphone sénégalais (+221 suivi de 77/76/78/75/70/71 + 7 chiffres)"),
-     *             @OA\Property(property="type_piece", type="string", enum={"cin", "passport"}, example="cin", description="Type de pièce d'identité"),
-     *             @OA\Property(property="numero", type="string", example="A1234567890123", description="Numéro de pièce d'identité (13-14 caractères alphanumériques)"),
-     *             @OA\Property(property="adresse", type="string", maxLength=255, example="Dakar, Sénégal", description="Adresse complète"),
-     *             @OA\Property(property="email", type="string", format="email", example="dev.testghost@gmail.com", description="Adresse email unique"),
-     *             @OA\Property(property="code", type="string", pattern="^[0-9]{4}$", example="1234", description="Code PIN à 4 chiffres")
+     *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Numéro de téléphone sénégalais (+221 suivi de 9 chiffres). Optionnel si email fourni"),
+     *             @OA\Property(property="email", type="string", format="email", example="dev.testghost@gmail.com", description="Adresse email. Optionnel si téléphone fourni"),
+     *             @OA\Property(property="nom", type="string", maxLength=255, example="Diop", description="Nom de famille (optionnel)"),
+     *             @OA\Property(property="prenom", type="string", maxLength=255, example="Mamadou", description="Prénom (optionnel)"),
+     *             @OA\Property(property="type_piece", type="string", enum={"cin", "passport"}, example="cin", description="Type de pièce d'identité (optionnel)"),
+     *             @OA\Property(property="numero", type="string", example="A1234567890123", description="Numéro de pièce d'identité (optionnel)"),
+     *             @OA\Property(property="adresse", type="string", maxLength=500, example="Dakar, Sénégal", description="Adresse complète (optionnel)"),
+     *             @OA\Property(property="code", type="string", example="1234", description="Code PIN choisi par l'utilisateur (optionnel à ce stade)")
      *         )
      *     ),
      *     @OA\Response(
-     *         response=201,
-     *         description="Inscription réussie - Un OTP de bienvenue sera envoyé automatiquement",
+     *         response=200,
+     *         description="Code OTP envoyé avec succès - L'utilisateur doit confirmer pour finaliser l'inscription",
      *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Code OTP envoyé avec succès"),
      *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string", example="a054cb85-a834-4f71-bb18-360fd2ae205a"),
-     *                     @OA\Property(property="nom", type="string", example="Diop"),
-     *                     @OA\Property(property="prenom", type="string", example="Mamadou"),
-     *                     @OA\Property(property="type_piece", type="string", example="cin"),
-     *                     @OA\Property(property="numero", type="string", example="A1234567890123"),
-     *                     @OA\Property(property="adresse", type="string", example="Dakar, Sénégal"),
-     *                     @OA\Property(property="telephone", type="string", example="+221771234567"),
-     *                     @OA\Property(property="email", type="string", example="test.devghost@gmail.com"),
-     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2025-11-11T11:28:42.312000Z")
-     *                 ),
-     *                 @OA\Property(property="token", type="string", example="eyJ0b2tlbl9pZCI6ImEwNT..."),
-     *                 @OA\Property(property="token_type", type="string", example="Bearer")
+     *                 @OA\Property(property="identifier", type="string", example="+221771234567"),
+     *                 @OA\Property(property="expires_in_minutes", type="integer", example=10)
      *             )
      *         )
      *     ),
@@ -74,37 +70,20 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request)
     {
-        $user = $this->auth->register($request->validated());
-        $token = $user->createToken('auth_token')->accessToken;
-
-        // Envoyer les notifications de bienvenue (synchrone pour éviter les problèmes de queue)
         try {
-            $otpService = app(\App\Services\Contracts\OtpServiceInterface::class);
+            $result = $this->registrationService->initiateRegistration($request->validated());
 
-            // Envoi par email si disponible
-            if ($user->email) {
-                $otpService->generateAndSend($user->email, 'registration');
-            }
-
-            // Envoi par SMS si disponible
-            if ($user->telephone) {
-                $otpService->generateAndSend($user->telephone, 'registration');
-            }
-
-            \Illuminate\Support\Facades\Log::info('Notifications d\'inscription envoyées', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'telephone' => $user->telephone
-            ]);
+            return $this->successResponse([
+                'identifier' => $result['identifier'],
+                'expires_in_minutes' => $result['expires_in_minutes']
+            ], $result['message']);
         } catch (\Exception $e) {
-            // Logger l'erreur mais ne pas bloquer l'inscription
-            \Illuminate\Support\Facades\Log::error('Erreur envoi notifications inscription', [
-                'user_id' => $user->id,
+            Log::error('Erreur lors de l\'initiation de l\'inscription', [
                 'error' => $e->getMessage()
             ]);
-        }
 
-        return new AuthResource($user, $token);
+            return $this->errorResponse($e->getMessage(), 500);
+        }
     }
 
     /**
@@ -306,5 +285,161 @@ class AuthController extends Controller
         }
 
         return $this->successResponse($user, 'Informations utilisateur récupérées');
+    }
+
+
+    /**
+     * @OA\Post(
+     *     path="/auth/confirmation",
+     *     summary="Confirmer l'inscription avec le code OTP",
+     *     description="Valide le code OTP et crée le compte utilisateur avec son wallet",
+     *     operationId="confirmRegistration",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"telephone", "code_otp"},
+     *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Téléphone utilisé pour l'inscription"),
+     *             @OA\Property(property="code_otp", type="string", example="123456", description="Code OTP à 6 chiffres"),
+     *             @OA\Property(property="nom", type="string", example="Diop", description="Nom (optionnel si déjà fourni)"),
+     *             @OA\Property(property="prenom", type="string", example="Mamadou", description="Prénom (optionnel si déjà fourni)"),
+     *             @OA\Property(property="type_piece", type="string", enum={"cin", "passport"}, example="cin", description="Type de pièce (optionnel)"),
+     *             @OA\Property(property="numero", type="string", example="A1234567890123", description="Numéro de pièce (optionnel)"),
+     *             @OA\Property(property="adresse", type="string", example="Dakar", description="Adresse (optionnel)"),
+     *             @OA\Property(property="code", type="string", example="1234", description="Code PIN (optionnel)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Compte créé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Compte créé avec succès"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", type="object",
+     *                     @OA\Property(property="id", type="string", example="507f1f77bcf86cd799439011"),
+     *                     @OA\Property(property="telephone", type="string", example="+221771234567"),
+     *                     @OA\Property(property="email", type="string", example="user@example.com"),
+     *                     @OA\Property(property="nom", type="string", example="Diop"),
+     *                     @OA\Property(property="prenom", type="string", example="Mamadou"),
+     *                     @OA\Property(property="wallet_id", type="string", example="507f1f77bcf86cd799439012")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Code OTP invalide ou session expirée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Code OTP invalide ou expiré")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=410,
+     *         description="Session d'enregistrement expirée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Données d'enregistrement expirées. Veuillez recommencer.")
+     *         )
+     *     )
+     * )
+     */
+    public function confirm(ConfirmRegistrationRequest $request)
+    {
+        try {
+            $validated = $request->validated();
+
+            $result = $this->registrationService->confirmRegistration(
+                $validated['identifier'],
+                $validated['otp_code'],
+                array_diff_key($validated, ['identifier' => '', 'otp_code' => ''])
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => $result['message'],
+                'data' => $result['user']
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la confirmation d\'inscription', [
+                'error' => $e->getMessage()
+            ]);
+
+            $statusCode = str_contains($e->getMessage(), 'expirée') ? 410 : 400;
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/auth/resend",
+     *     summary="Renvoyer le code OTP d'inscription",
+     *     description="Renvoie un nouveau code OTP si le précédent a expiré ou n'a pas été reçu",
+     *     operationId="resendOtp",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"identifier"},
+     *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Téléphone utilisé pour l'inscription")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Code OTP renvoyé avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Code OTP renvoyé avec succès"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="identifier", type="string", example="+221771234567"),
+     *                 @OA\Property(property="expires_in_minutes", type="integer", example=10)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=410,
+     *         description="Session d'enregistrement expirée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Session d'enregistrement expirée. Veuillez recommencer le processus.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Erreur serveur",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Erreur lors du renvoi du code OTP")
+     *         )
+     *     )
+     * )
+     */
+    public function resendOtp(ResendOtpRequest $request)
+    {
+        try {
+            $result = $this->registrationService->resendOtp($request->validated()['identifier']);
+
+            return $this->successResponse([
+                'identifier' => $result['identifier'],
+                'expires_in_minutes' => $result['expires_in_minutes']
+            ], $result['message']);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors du renvoi du code OTP', [
+                'identifier' => $request->validated()['identifier'],
+                'error' => $e->getMessage()
+            ]);
+
+            $statusCode = str_contains($e->getMessage(), 'expirée') ? 410 : 500;
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
     }
 }

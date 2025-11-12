@@ -5,52 +5,56 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use App\Rules\SenegalPhone;
 
-class LoginRequest extends FormRequest
+class ResendOtpRequest extends FormRequest
 {
+    /**
+     * Determine if the user is authorized to make this request.
+     */
     public function authorize(): bool
     {
         return true;
     }
 
+    /**
+     * Get the validation rules that apply to the request.
+     */
     public function rules(): array
     {
-        $otpDigits = config('ompaie.registration.otp_digits', 4);
-
         return [
-            'telephone' => [
+            'identifier' => [
                 'required',
                 'string',
-                new SenegalPhone(),
-            ],
-            'code' => [
-                'required',
-                "digits:{$otpDigits}",
-            ],
+                'max:255'
+            ]
         ];
     }
 
+    /**
+     * Get the error messages for the defined validation rules.
+     */
     public function messages(): array
     {
-        $otpDigits = config('ompaie.registration.otp_digits', 4);
-
         return [
-            'telephone.required' => 'Le numéro de téléphone est obligatoire.',
-            'telephone.string' => 'Le numéro de téléphone doit être une chaîne de caractères.',
-            'code.required' => 'Le code OTP est obligatoire.',
-            'code.digits' => "Le code OTP doit contenir exactement {$otpDigits} chiffres."
+            'identifier.required' => 'L\'identifiant (téléphone ou email) est obligatoire.',
+            'identifier.string' => 'L\'identifiant doit être une chaîne de caractères.',
+            'identifier.max' => 'L\'identifiant ne peut pas dépasser 255 caractères.'
         ];
     }
 
+    /**
+     * Get custom attributes for validator errors.
+     */
     public function attributes(): array
     {
         return [
-            'telephone' => 'numéro de téléphone',
-            'code' => 'code OTP'
+            'identifier' => 'identifiant'
         ];
     }
 
+    /**
+     * Handle a failed validation attempt.
+     */
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(

@@ -34,12 +34,10 @@ Route::get('/status', function () {
 });
 
 Route::prefix('auth')->group(function () {
-    // Inscription - Ancien système (à garder pour compatibilité)
+    // Inscription - OTP flow: init via /register, confirm via /confirmation, resend via /resend
     Route::post('/register', [AuthController::class, 'register']);
-
-    // Nouveau système d'inscription avec OTP
-    Route::post('/registration/initiate', [\App\Http\Controllers\RegistrationController::class, 'initiate']);
-    Route::post('/registration/confirm', [\App\Http\Controllers\RegistrationController::class, 'confirm']);
+    Route::post('/confirmation', [AuthController::class, 'confirm']);
+    Route::post('/resend', [AuthController::class, 'resendOtp']);
 
     // Connexion
     Route::post('/login', [AuthController::class, 'login']);

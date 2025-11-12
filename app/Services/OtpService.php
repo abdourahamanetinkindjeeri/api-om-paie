@@ -43,7 +43,14 @@ class OtpService implements OtpServiceInterface
                 ]);
             }
 
-            return true;
+            if (app()->environment(['local','testing'])) {
+    Log::debug('OTP généré', [
+        'identifier' => $identifier,
+        'purpose' => $purpose,
+        'code' => $code
+    ]);
+}
+return true;
         } catch (\Exception $e) {
             Log::error("Erreur lors de l'envoi du code OTP", [
                 'identifier' => $identifier,

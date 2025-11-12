@@ -75,6 +75,7 @@ RUN apk add --no-cache \
         libzip-dev \
         openssl-dev \
         libsodium-dev \
+        curl-dev \
         autoconf \
         gcc \
         g++ \
@@ -93,6 +94,7 @@ RUN apk add --no-cache \
         session \
         fileinfo \
         sodium \
+        curl \
     && pecl install mongodb \
     && docker-php-ext-enable mongodb \
     && apk del gcc g++ make autoconf libtool pkgconfig

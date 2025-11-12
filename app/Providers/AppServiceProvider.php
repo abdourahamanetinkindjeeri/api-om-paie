@@ -20,6 +20,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Enregistrement des repositories
+        $this->app->bind(
+            \App\Repositories\Contracts\MerchantRepositoryInterface::class,
+            \App\Repositories\MerchantRepository::class
+        );
+
         // Enregistrement du service de transfert
         $this->app->bind(
             \App\Services\Contracts\TransferServiceInterface::class,

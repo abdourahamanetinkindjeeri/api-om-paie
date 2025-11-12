@@ -30,7 +30,7 @@ services:
       - key: SESSION_DRIVER
         value: file
       - key: QUEUE_CONNECTION
-        value: sync
+        value: database
       - key: CACHE_DRIVER
         value: file
       - key: L5_SWAGGER_USE_ABSOLUTE_PATH

@@ -13,4 +13,9 @@ interface RegistrationServiceInterface
      * Confirme l'enregistrement avec le code OTP
      */
     public function confirmRegistration(string $identifier, string $otpCode, array $userData = []): array;
+
+    /**
+     * Renvoie le code OTP d'enregistrement
+     */
+    public function resendOtp(string $identifier): array;
 }

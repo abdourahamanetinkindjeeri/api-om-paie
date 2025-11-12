@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\ActiveMerchant;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -21,35 +22,35 @@ class PaymentRequest extends FormRequest
      */
     public function rules(): array
     {
+        $minAmount = config('ompaie.payment.amount.min', 100);
+        $maxAmount = config('ompaie.payment.amount.max', 2000000);
+        $maxDescriptionLength = config('ompaie.payment.description_max_length', 255);
+        $maxReferenceLength = config('ompaie.payment.reference_externe_max_length', 100);
+        $amountDecimals = config('ompaie.payment.amount_decimals', 2);
+
         return [
             'code_marchand' => [
                 'required',
                 'string',
-                function ($attribute, $value, $fail) {
-                    $merchant = \App\Models\Merchant::where('code', $value)
-                        ->where('status', 'active')
-                        ->first();
-
-                    if (!$merchant) {
-                        $fail('Ce code marchand n\'existe pas ou est inactif.');
-                    }
-                }
+                new ActiveMerchant()
             ],
             'montant' => [
                 'required',
                 'numeric',
-                'min:100',
-                'max:2000000' // Limite maximale de paiement
+                "min:{$minAmount}",
+                "max:{$maxAmount}",
+                "regex:/^\d+(\.\d{1,{$amountDecimals}})?$/" // Validation des décimales
             ],
             'description' => [
                 'nullable',
                 'string',
-                'max:255'
+                "max:{$maxDescriptionLength}"
             ],
             'reference_externe' => [
                 'nullable',
                 'string',
-                'max:100'
+                "max:{$maxReferenceLength}",
+                'regex:/^[a-zA-Z0-9_-]+$/' // Format alphanumérique avec tirets et underscores
             ]
         ];
     }
@@ -59,15 +60,36 @@ class PaymentRequest extends FormRequest
      */
     public function messages(): array
     {
+        $minAmount = config('ompaie.payment.amount.min', 100);
+        $maxAmount = config('ompaie.payment.amount.max', 2000000);
+        $maxDescriptionLength = config('ompaie.payment.description_max_length', 255);
+        $maxReferenceLength = config('ompaie.payment.reference_externe_max_length', 100);
+        $amountDecimals = config('ompaie.payment.amount_decimals', 2);
+
         return [
             'code_marchand.required' => 'Le code marchand est obligatoire.',
             'code_marchand.string' => 'Le code marchand doit être une chaîne de caractères.',
             'montant.required' => 'Le montant est obligatoire.',
             'montant.numeric' => 'Le montant doit être un nombre.',
-            'montant.min' => 'Le montant minimum est de 100 FCFA.',
-            'montant.max' => 'Le montant maximum autorisé est de 2,000,000 FCFA.',
-            'description.max' => 'La description ne peut pas dépasser 255 caractères.',
-            'reference_externe.max' => 'La référence externe ne peut pas dépasser 100 caractères.'
+            'montant.min' => "Le montant minimum est de {$minAmount} FCFA.",
+            'montant.max' => "Le montant maximum autorisé est de " . number_format($maxAmount, 0, ',', ' ') . " FCFA.",
+            'montant.regex' => "Le montant ne peut avoir plus de {$amountDecimals} décimales.",
+            'description.max' => "La description ne peut pas dépasser {$maxDescriptionLength} caractères.",
+            'reference_externe.max' => "La référence externe ne peut pas dépasser {$maxReferenceLength} caractères.",
+            'reference_externe.regex' => 'La référence externe ne peut contenir que des lettres, chiffres, tirets et underscores.'
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     */
+    public function attributes(): array
+    {
+        return [
+            'code_marchand' => 'code marchand',
+            'montant' => 'montant',
+            'description' => 'description',
+            'reference_externe' => 'référence externe'
         ];
     }
 

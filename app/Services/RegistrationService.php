@@ -174,4 +174,48 @@ class RegistrationService implements RegistrationServiceInterface
             throw new ValidationException('Un compte existe déjà avec ce numéro de pièce d\'identité');
         }
     }
+
+    /**
+     * Renvoie le code OTP d'enregistrement
+     */
+    public function resendOtp(string $identifier): array
+    {
+        try {
+            // Vérifier que les données d'enregistrement existent toujours en cache
+            $cacheKey = 'registration_data_' . md5($identifier);
+            $cachedUserData = Cache::get($cacheKey);
+
+            if (!$cachedUserData) {
+                throw new \Exception('Session d\'enregistrement expirée. Veuillez recommencer le processus.');
+            }
+
+            // Renvoyer le code OTP
+            $otpSent = $this->otpService->generateAndSend(
+                $identifier,
+                OtpCode::PURPOSE_REGISTRATION
+            );
+
+            if (!$otpSent) {
+                throw new \Exception('Impossible d\'envoyer le code OTP');
+            }
+
+            Log::info('Code OTP renvoyé', [
+                'identifier' => $identifier
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Code OTP renvoyé avec succès',
+                'identifier' => $identifier,
+                'expires_in_minutes' => OtpCode::DEFAULT_EXPIRY_MINUTES
+            ];
+        } catch (\Exception $e) {
+            Log::error('Erreur lors du renvoi du code OTP', [
+                'identifier' => $identifier,
+                'error' => $e->getMessage()
+            ]);
+
+            throw new \Exception('Erreur lors du renvoi du code OTP: ' . $e->getMessage());
+        }
+    }
 }
