@@ -88,11 +88,15 @@ class PaymentService extends BaseService implements PaymentServiceInterface
 
             $fullMeta = array_merge($defaultMeta, $metadata);
 
-            // Utiliser une transaction MongoDB pour assurer l'ACID
-            return DB::transaction(function () use (
-                $userWallet, $merchantWallet, $amount, $debitRef, $creditRef, $fullMeta,
-                $paymentRef, $user, $merchant
-            ) {
+            // Exécuter les opérations de paiement séquentiellement (pas de transaction MongoDB sur instance standalone)
+            $debitTransaction = null;
+            $creditTransaction = null;
+            $userBalanceUpdated = false;
+            $merchantBalanceUpdated = false;
+            $newUserBalance = $userWallet->balance - $amount;
+            $newMerchantBalance = $merchantWallet->balance + $amount;
+
+            try {
                 // Créer transaction débit
                 $debitTransaction = $this->paymentRepository->createPaymentTransaction([
                     'wallet_id' => $userWallet->id,
@@ -114,11 +118,11 @@ class PaymentService extends BaseService implements PaymentServiceInterface
                 ]);
 
                 // Mise à jour balances
-                $newUserBalance = $userWallet->balance - $amount;
-                $newMerchantBalance = $merchantWallet->balance + $amount;
-
                 $this->paymentRepository->updateWalletBalance($userWallet->id, $newUserBalance);
+                $userBalanceUpdated = true;
+
                 $this->paymentRepository->updateWalletBalance($merchantWallet->id, $newMerchantBalance);
+                $merchantBalanceUpdated = true;
 
                 // Notification SMS à l'utilisateur (nouveau solde)
                 try {
@@ -167,7 +171,24 @@ class PaymentService extends BaseService implements PaymentServiceInterface
                     'credit_transaction' => $creditTransaction,
                     'metadata' => $fullMeta
                 ];
-            });
+            } catch (Exception $e) {
+                // Rollback manuel en cas d'erreur
+                if ($merchantBalanceUpdated) {
+                    $this->paymentRepository->updateWalletBalance($merchantWallet->id, $merchantWallet->balance);
+                }
+                if ($userBalanceUpdated) {
+                    $this->paymentRepository->updateWalletBalance($userWallet->id, $userWallet->balance);
+                }
+                if ($creditTransaction) {
+                    // Supprimer la transaction crédit si elle existe
+                    $this->paymentRepository->delete($creditTransaction->id);
+                }
+                if ($debitTransaction) {
+                    // Supprimer la transaction débit si elle existe
+                    $this->paymentRepository->delete($debitTransaction->id);
+                }
+                throw $e;
+            }
         } catch (Exception $e) {
             // Supprimer le cache en cas d'erreur
             Cache::forget($cacheKey);
