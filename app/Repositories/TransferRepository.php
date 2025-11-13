@@ -36,8 +36,12 @@ class TransferRepository extends BaseRepository
 
     /**
      * Créer une transaction de transfert
+     *
+     * @param array $data
+     * @param mixed $session Session MongoDB optionnelle pour les transactions
+     * @return Transaction
      */
-    public function createTransferTransaction(array $data): Transaction
+    public function createTransferTransaction(array $data, $session = null): Transaction
     {
         return $this->create([
             'wallet_id' => $data['wallet_id'],
@@ -46,14 +50,23 @@ class TransferRepository extends BaseRepository
             'status' => $data['status'] ?? 'pending',
             'reference' => $data['reference'],
             'meta' => $data['meta'] ?? []
-        ]);
+        ], $session);
     }
 
     /**
      * Mettre à jour le solde d'un wallet
+     *
+     * @param string $walletId
+     * @param float $newBalance
+     * @param mixed $session Session MongoDB optionnelle pour les transactions
+     * @return bool
      */
-    public function updateWalletBalance(string $walletId, float $newBalance): bool
+    public function updateWalletBalance(string $walletId, float $newBalance, $session = null): bool
     {
+        if ($session) {
+            return Wallet::where('id', $walletId)->update(['balance' => $newBalance], ['session' => $session]);
+        }
+
         return Wallet::where('id', $walletId)->update(['balance' => $newBalance]);
     }
 

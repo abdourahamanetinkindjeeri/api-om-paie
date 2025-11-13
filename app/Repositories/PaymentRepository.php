@@ -53,8 +53,12 @@ class PaymentRepository extends BaseRepository
 
     /**
      * Créer une transaction de paiement
+     *
+     * @param array $data
+     * @param mixed $session Session MongoDB optionnelle pour les transactions
+     * @return Transaction
      */
-    public function createPaymentTransaction(array $data): Transaction
+    public function createPaymentTransaction(array $data, $session = null): Transaction
     {
         return $this->create([
             'wallet_id' => $data['wallet_id'],
@@ -63,7 +67,7 @@ class PaymentRepository extends BaseRepository
             'status' => $data['status'] ?? 'pending',
             'reference' => $data['reference'],
             'meta' => $data['meta'] ?? []
-        ]);
+        ], $session);
     }
 
     /**

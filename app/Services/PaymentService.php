@@ -4,198 +4,98 @@ namespace App\Services;
 
 use App\Repositories\PaymentRepository;
 use App\Services\Contracts\PaymentServiceInterface;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use App\Facades\Notification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Exception;
 
 class PaymentService extends BaseService implements PaymentServiceInterface
 {
     protected PaymentRepository $paymentRepository;
+    protected PaymentValidator $paymentValidator;
+    protected PaymentProcessor $paymentProcessor;
+    protected PaymentNotificationService $paymentNotificationService;
+    protected PaymentHistoryService $paymentHistoryService;
 
-    public function __construct(PaymentRepository $repository)
-    {
+    public function __construct(
+        PaymentRepository $repository,
+        PaymentValidator $paymentValidator,
+        PaymentProcessor $paymentProcessor,
+        PaymentNotificationService $paymentNotificationService,
+        PaymentHistoryService $paymentHistoryService
+    ) {
         parent::__construct($repository);
         $this->paymentRepository = $repository;
+        $this->paymentValidator = $paymentValidator;
+        $this->paymentProcessor = $paymentProcessor;
+        $this->paymentNotificationService = $paymentNotificationService;
+        $this->paymentHistoryService = $paymentHistoryService;
     }
 
     /**
-     * Effectuer un paiement vers un marchand avec transactions ACID et protections
+     * Effectuer un paiement vers un marchand avec validation et traitement spécialisés
      */
     public function payMerchant(object $user, string $merchantCode, float $amount, array $metadata = []): array
     {
-        if ($amount <= 0) {
-            throw new Exception('Le montant doit être supérieur à 0');
+        // 1. Validation complète de la demande de paiement
+        $validation = $this->paymentValidator->validatePaymentRequest($user, $merchantCode, $amount, $metadata);
+        if (!$validation['valid']) {
+            throw new Exception('Validation échouée : ' . implode(', ', $validation['errors']));
         }
 
-        // Vérifier la référence externe pour déduplication
-        $externalRef = $metadata['reference_externe'] ?? null;
-        if ($externalRef) {
-            $existingTransaction = $this->paymentRepository->findTransactionByExternalReference($externalRef, $user->id);
-            if ($existingTransaction) {
-                throw new Exception('Cette référence externe a déjà été utilisée pour un paiement');
-            }
+        // 2. Récupération des entités nécessaires
+        $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
+        $userWallet = $user->wallet;
+        $merchantWallet = $this->paymentRepository->getMerchantWallet($merchant->id);
+
+        // 3. Validation des soldes
+        $balanceErrors = $this->paymentValidator->validateSufficientBalance($userWallet->id, $amount);
+        if (!empty($balanceErrors)) {
+            throw new Exception('Validation soldes échouée : ' . implode(', ', $balanceErrors));
         }
 
-        // Protection contre le double-clic avec cache
-        $cacheKey = "payment_processing_{$user->id}_{$merchantCode}_{$amount}";
-        if (Cache::has($cacheKey)) {
-            throw new Exception('Paiement en cours de traitement, veuillez patienter');
+        $merchantErrors = $this->paymentValidator->validateMerchantCanReceive($merchantWallet->id, $amount);
+        if (!empty($merchantErrors)) {
+            throw new Exception('Validation marchand échouée : ' . implode(', ', $merchantErrors));
         }
-        Cache::put($cacheKey, true, 30); // 30 secondes de protection
+
+        // 4. Définition du verrou anti-dédoublement
+        $cacheKey = $this->paymentProcessor->setProcessingLock($user, $merchantCode, $amount);
 
         try {
-            // Récupération marchand et wallets
-            $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
-            if (!$merchant) {
-                throw new Exception('Code marchand invalide ou marchand inactif');
-            }
+            // 5. Traitement du paiement
+            $result = $this->paymentProcessor->processPayment(
+                $user,
+                $merchant,
+                $userWallet,
+                $merchantWallet,
+                $amount,
+                $metadata
+            );
 
-            $userWallet = $user->wallet;
-            $merchantWallet = $this->paymentRepository->getMerchantWallet($merchant->id);
+            // 6. Envoi de la notification de succès
+            $this->paymentNotificationService->sendPaymentSuccessNotification(
+                $user,
+                $merchant->name,
+                $amount,
+                $result['user']['new_balance'],
+                $result['reference']
+            );
 
-            if (!$userWallet || !$merchantWallet) {
-                throw new Exception('Wallet utilisateur ou marchand introuvable');
-            }
+            return array_merge($result, ['success' => true]);
 
-            // Vérification solde
-            if ($userWallet->balance < $amount) {
-                throw new Exception('Solde insuffisant');
-            }
-
-            if (($merchantWallet->balance + $amount) > 2000000) {
-                throw new Exception('Le marchand dépasserait la limite maximum de 2,000,000 FCFA');
-            }
-
-            // Générer références uniques
-            $paymentRef = 'PAY_' . Str::uuid();
-            $debitRef = 'DEB_' . Str::uuid();
-            $creditRef = 'CRD_' . Str::uuid();
-
-            $defaultMeta = [
-                'user_phone' => $user->telephone,
-                'merchant_code' => $merchantCode,
-                'merchant_name' => $merchant->name,
-                'payment_reference' => $paymentRef
-            ];
-
-            if ($externalRef) {
-                $defaultMeta['reference_externe'] = $externalRef;
-            }
-
-            $fullMeta = array_merge($defaultMeta, $metadata);
-
-            // Exécuter les opérations de paiement séquentiellement (pas de transaction MongoDB sur instance standalone)
-            $debitTransaction = null;
-            $creditTransaction = null;
-            $userBalanceUpdated = false;
-            $merchantBalanceUpdated = false;
-            $newUserBalance = $userWallet->balance - $amount;
-            $newMerchantBalance = $merchantWallet->balance + $amount;
-
-            try {
-                // Créer transaction débit
-                $debitTransaction = $this->paymentRepository->createPaymentTransaction([
-                    'wallet_id' => $userWallet->id,
-                    'type' => 'payment',
-                    'amount' => -$amount,
-                    'status' => 'success',
-                    'reference' => $debitRef,
-                    'meta' => array_merge($fullMeta, ['transaction_type' => 'debit', 'direction' => 'out'])
-                ]);
-
-                // Créer transaction crédit
-                $creditTransaction = $this->paymentRepository->createPaymentTransaction([
-                    'wallet_id' => $merchantWallet->id,
-                    'type' => 'payment',
-                    'amount' => $amount,
-                    'status' => 'success',
-                    'reference' => $creditRef,
-                    'meta' => array_merge($fullMeta, ['transaction_type' => 'credit', 'direction' => 'in'])
-                ]);
-
-                // Mise à jour balances
-                $this->paymentRepository->updateWalletBalance($userWallet->id, $newUserBalance);
-                $userBalanceUpdated = true;
-
-                $this->paymentRepository->updateWalletBalance($merchantWallet->id, $newMerchantBalance);
-                $merchantBalanceUpdated = true;
-
-                // Notification SMS à l'utilisateur (nouveau solde)
-                try {
-                    if (!empty($user->telephone)) {
-                        $fmtAmount = number_format($amount, 0, ',', ' ');
-                        $fmtBalance = number_format($newUserBalance, 0, ',', ' ');
-                        $message = "OM-Paie: Paiement de {$fmtAmount} FCFA chez {$merchant->name}. Nouveau solde: {$fmtBalance} FCFA. Ref: {$paymentRef}";
-                        Notification::send($user->telephone, $message);
-
-                        Log::info('Notification paiement envoyée (SMS)', [
-                            'user_id' => $user->id ?? null,
-                            'telephone' => $user->telephone,
-                            'payment_ref' => $paymentRef,
-                            'amount' => $amount,
-                            'new_balance' => $newUserBalance
-                        ]);
-                    } else {
-                        Log::warning('Téléphone utilisateur manquant - notification paiement non envoyée', [
-                            'user_id' => $user->id ?? null,
-                            'payment_ref' => $paymentRef
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    Log::error('Erreur envoi SMS notification paiement', [
-                        'user_id' => $user->id ?? null,
-                        'telephone' => $user->telephone ?? null,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-
-                return [
-                    'success' => true,
-                    'reference' => $paymentRef,
-                    'user' => [
-                        'phone' => $user->telephone,
-                        'name' => $user->nom . ' ' . $user->prenom,
-                        'new_balance' => $newUserBalance
-                    ],
-                    'merchant' => [
-                        'code' => $merchant->code,
-                        'name' => $merchant->name,
-                        'new_balance' => $newMerchantBalance
-                    ],
-                    'amount' => $amount,
-                    'debit_transaction' => $debitTransaction,
-                    'credit_transaction' => $creditTransaction,
-                    'metadata' => $fullMeta
-                ];
-            } catch (Exception $e) {
-                // Rollback manuel en cas d'erreur
-                if ($merchantBalanceUpdated) {
-                    $this->paymentRepository->updateWalletBalance($merchantWallet->id, $merchantWallet->balance);
-                }
-                if ($userBalanceUpdated) {
-                    $this->paymentRepository->updateWalletBalance($userWallet->id, $userWallet->balance);
-                }
-                if ($creditTransaction) {
-                    // Supprimer la transaction crédit si elle existe
-                    $this->paymentRepository->delete($creditTransaction->id);
-                }
-                if ($debitTransaction) {
-                    // Supprimer la transaction débit si elle existe
-                    $this->paymentRepository->delete($debitTransaction->id);
-                }
-                throw $e;
-            }
         } catch (Exception $e) {
-            // Supprimer le cache en cas d'erreur
-            Cache::forget($cacheKey);
-            throw new Exception('Erreur lors du traitement du paiement : ' . $e->getMessage());
+            // Envoi de notification d'échec
+            $this->paymentNotificationService->sendPaymentFailureNotification(
+                $user,
+                $merchant->name,
+                $amount,
+                $e->getMessage()
+            );
+
+            throw $e;
+
         } finally {
-            // Supprimer le cache après succès
-            Cache::forget($cacheKey);
+            // Libération du verrou
+            $this->paymentProcessor->releaseProcessingLock($cacheKey);
         }
     }
 
@@ -223,17 +123,11 @@ class PaymentService extends BaseService implements PaymentServiceInterface
 
     public function getUserPaymentHistory(string $userPhone, int $page = 1, int $limit = 10): LengthAwarePaginator
     {
-        $user = $this->paymentRepository->findUserByPhone($userPhone);
-        if (!$user) throw new Exception('Utilisateur non trouvé');
-
-        return $this->paymentRepository->getUserPaymentHistory($user->id, $page, $limit);
+        return $this->paymentHistoryService->getUserPaymentHistory($userPhone, $page, $limit);
     }
 
     public function getMerchantPaymentHistory(string $merchantCode, int $page = 1, int $limit = 10): LengthAwarePaginator
     {
-        $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
-        if (!$merchant) throw new Exception('Marchand non trouvé');
-
-        return $this->paymentRepository->getMerchantPaymentHistory($merchant->id, $page, $limit);
+        return $this->paymentHistoryService->getMerchantPaymentHistory($merchantCode, $page, $limit);
     }
 }

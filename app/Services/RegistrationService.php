@@ -7,6 +7,7 @@ use App\Services\Contracts\OtpServiceInterface;
 use App\Repositories\UserRepository;
 use App\Repositories\WalletRepository;
 use App\Models\OtpCode;
+use App\Rules\SenegalPhone;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -154,8 +155,11 @@ class RegistrationService implements RegistrationServiceInterface
         }
 
         // Validation du format de téléphone s'il est fourni
-        if (!empty($userData['telephone']) && !preg_match('/^\+221[0-9]{9}$/', $userData['telephone'])) {
-            throw new ValidationException('Format de téléphone invalide (+221xxxxxxxxx)');
+        if (!empty($userData['telephone'])) {
+            $senegalPhoneRule = new SenegalPhone();
+            if (!$senegalPhoneRule->passes('telephone', $userData['telephone'])) {
+                throw new ValidationException('Format de téléphone invalide (+221XXXXXXXXX ou 77XXXXXXX)');
+            }
         }
 
         // Validation de l'email s'il est fourni

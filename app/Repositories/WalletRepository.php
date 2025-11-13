@@ -21,6 +21,14 @@ class WalletRepository
     }
 
     /**
+     * Trouve un wallet par son ID
+     */
+    public function find(string $walletId): ?Wallet
+    {
+        return Wallet::find($walletId);
+    }
+
+    /**
      * Trouve le wallet d'un utilisateur
      */
     public function findByUserId(string $userId): ?Wallet
@@ -30,10 +38,22 @@ class WalletRepository
 
     /**
      * Met à jour le solde d'un wallet
+     *
+     * @param string $walletId
+     * @param float $newBalance
+     * @param mixed $session Session MongoDB optionnelle pour les transactions
+     * @return bool
      */
-    public function updateBalance(string $walletId, float $newBalance): bool
+    public function updateBalance(string $walletId, float $newBalance, $session = null): bool
     {
-        return Wallet::where('id', $walletId)->update(['balance' => $newBalance]);
+        $query = Wallet::where('id', $walletId);
+
+        if ($session) {
+            // Utiliser la session MongoDB pour les transactions
+            return $query->update(['balance' => $newBalance], ['session' => $session]);
+        }
+
+        return $query->update(['balance' => $newBalance]);
     }
 
     /**

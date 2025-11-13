@@ -6,11 +6,16 @@ use App\Models\OtpCode;
 use App\Repositories\UserRepository;
 use App\Models\User;
 use App\Services\Contracts\OtpServiceInterface;
+use App\Services\RateLimiter;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthService
 {
-    public function __construct(private UserRepository $users) {}
+    public function __construct(
+        private UserRepository $users,
+        private RateLimiter $rateLimiter
+    ) {}
 
     public function register(array $data): User
     {
@@ -20,9 +25,29 @@ class AuthService
 
     public function initiateLogin(string $telephone, string $password): ?array
     {
+        // Vérifier les limites de taux pour les tentatives de connexion
+        $rateLimitKey = "login:{$telephone}";
+        $rateCheck = $this->rateLimiter->attempt($rateLimitKey, 'login_attempts');
+
+        if (!$rateCheck['allowed']) {
+            Log::warning("Login rate limit exceeded", [
+                'telephone' => $telephone,
+                'blocked_until' => $rateCheck['blocked_until']
+            ]);
+
+            return [
+                'error' => 'rate_limit_exceeded',
+                'message' => 'Trop de tentatives de connexion. Veuillez réessayer plus tard.',
+                'blocked_until' => $rateCheck['blocked_until'],
+                'remaining_attempts' => $rateCheck['remaining_attempts']
+            ];
+        }
+
         $user = $this->users->findByTelephone($telephone);
 
         if (!$user) {
+            // Enregistrer la tentative même si l'utilisateur n'existe pas (sécurité)
+            $this->rateLimiter->recordAttempt($rateLimitKey, 'login_attempts');
             return null;
         }
 
@@ -34,6 +59,8 @@ class AuthService
         // Vérifier le code PIN
         if (!Hash::check($password, $user->code)) {
             $user->incrementLoginAttempts();
+            // Enregistrer la tentative de connexion échouée
+            $this->rateLimiter->recordAttempt($rateLimitKey, 'login_attempts');
 
             if ($user->isBlocked()) {
                 return $this->blockedResponse($user, 'Compte bloqué après ' . User::MAX_LOGIN_ATTEMPTS . ' tentatives incorrectes');
@@ -43,6 +70,7 @@ class AuthService
                 'error' => 'invalid_credentials',
                 'message' => 'Code incorrect',
                 'attempts_remaining' => $user->remainingAttempts(),
+                'remaining_rate_attempts' => $rateCheck['remaining_attempts']
             ];
         }
 
@@ -91,6 +119,9 @@ class AuthService
 
         // Connexion réussie avec 2FA
         $user->resetLoginAttempts();
+        // Réinitialiser le compteur de rate limiting
+        $rateLimitKey = "login:{$telephone}";
+        $this->rateLimiter->reset($rateLimitKey, 'login_attempts');
 
         $tokenResult = $user->createToken('auth_token');
 

@@ -12,6 +12,14 @@ abstract class BaseRepository implements BaseRepositoryInterface
 {
     protected Model $model;
 
+    /**
+     * Get the model instance
+     */
+    public function getModel(): Model
+    {
+        return $this->model;
+    }
+
     public function all(array $filters = [], int $page = 1, int $limit = 10): LengthAwarePaginator
     {
         $query = $this->model->newQuery();
@@ -32,9 +40,15 @@ abstract class BaseRepository implements BaseRepositoryInterface
         return $this->model->find($id);
     }
 
-    public function create(array $data): Model
+    public function create(array $data, $session = null): Model
     {
-        $entity = $this->model->create($data);
+        if ($session) {
+            // Utiliser la session MongoDB pour les transactions
+            $entity = $this->model->create($data, ['session' => $session]);
+        } else {
+            $entity = $this->model->create($data);
+        }
+
         event(new EntitySaved($entity));
         return $entity;
     }

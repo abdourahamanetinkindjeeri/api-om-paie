@@ -55,6 +55,24 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Contracts\HistoryServiceInterface::class,
             \App\Services\HistoryService::class
         );
+
+        // Enregistrement du gestionnaire de transactions
+        $this->app->singleton(
+            \App\Services\TransactionManager::class,
+            \App\Services\TransactionManager::class
+        );
+
+        // Enregistrement du limiteur de taux
+        $this->app->singleton(
+            \App\Services\RateLimiter::class,
+            \App\Services\RateLimiter::class
+        );
+
+        // Enregistrement du gestionnaire de soldes
+        $this->app->singleton(
+            \App\Services\BalanceManager::class,
+            \App\Services\BalanceManager::class
+        );
     }
 
     /**
