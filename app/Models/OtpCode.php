@@ -97,7 +97,7 @@ class OtpCode extends Model
     /**
      * Génère un nouveau code OTP
      */
-    public static function generate(string $identifier, string $purpose = self::PURPOSE_REGISTRATION, int $expiryMinutes = null): string
+    public static function generate(string $identifier, string $purpose = self::PURPOSE_REGISTRATION, ?int $expiryMinutes = null): string
     {
         // Invalider les anciens codes pour cet identifiant et ce purpose
         static::where('identifier', $identifier)

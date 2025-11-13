@@ -26,7 +26,7 @@ class PaymentResource extends JsonResource
             'marchand' => [
                 'code' => $this->resource['merchant']['code'],
                 'nom' => $this->resource['merchant']['name'],
-                'nouveau_solde' => $this->resource['merchant']['new_balance']
+                // 'nouveau_solde' => $this->resource['merchant']['new_balance']
             ],
             'date_paiement' => now()->toISOString(),
             'statut' => 'completed',

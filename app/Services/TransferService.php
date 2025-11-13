@@ -6,7 +6,6 @@ use App\Repositories\TransferRepository;
 use App\Repositories\WalletRepository;
 use App\Services\Contracts\TransferServiceInterface;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use App\Facades\Notification;

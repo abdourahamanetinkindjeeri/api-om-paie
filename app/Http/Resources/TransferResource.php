@@ -26,7 +26,7 @@ class TransferResource extends JsonResource
             'destinataire' => [
                 'numero' => $this->resource['receiver']['number'],
                 'nom_complet' => $this->resource['receiver']['name'],
-                'nouveau_solde' => $this->resource['receiver']['new_balance']
+                // 'nouveau_solde' => $this->resource['receiver']['new_balance']
             ],
             'date_transfert' => now()->toISOString(),
             'statut' => 'completed'

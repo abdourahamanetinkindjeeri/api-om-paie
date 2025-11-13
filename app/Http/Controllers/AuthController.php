@@ -10,6 +10,7 @@ use App\Http\Resources\AuthResource;
 use App\Services\AuthService;
 use App\Services\Contracts\RegistrationServiceInterface;
 use App\Models\User;
+use App\Services\MongoPassportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -264,13 +265,13 @@ class AuthController extends Controller
 
         // Connexion réussie avec 2FA
         return $this->successResponse([
-            'user' => $result['user'],
+            // 'user' => $result['user'],
             'access_token' => $result['access_token'],
-            'token_type' => 'Bearer',
-            'expires_at' => $result['expires_at'] ?? null,
-            'expires_in' => $result['expires_in'] ?? (15 * 60),
+            // 'token_type' => 'Bearer',
+            // 'expires_at' => $result['expires_at'] ?? null,
+            // 'expires_in' => $result['expires_in'] ?? (15 * 60),
             'refresh_token' => $result['refresh_token'] ?? null,
-            'refresh_expires_at' => $result['refresh_expires_at'] ?? null,
+            // 'refresh_expires_at' => $result['refresh_expires_at'] ?? null,
         ], 'Connexion réussie');
     }
 
@@ -302,7 +303,7 @@ class AuthController extends Controller
     {
         $token = $request->bearerToken();
         if ($token) {
-            $passportService = app(\App\Services\MongoPassportService::class);
+            $passportService = app(MongoPassportService::class);
             $passportService->revokeToken($token);
         }
 
@@ -478,19 +479,13 @@ class AuthController extends Controller
      *     ),
      *     @OA\Response(
      *         response=201,
-     *         description="Compte créé avec succès",
+     *         description="Compte créé avec succès - Tokens d'accès retournés",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Compte créé avec succès"),
      *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="user", type="object",
-     *                     @OA\Property(property="id", type="string", example="507f1f77bcf86cd799439011"),
-     *                     @OA\Property(property="telephone", type="string", example="+221771234567"),
-     *                     @OA\Property(property="email", type="string", example="user@example.com"),
-     *                     @OA\Property(property="nom", type="string", example="Diop"),
-     *                     @OA\Property(property="prenom", type="string", example="Mamadou"),
-     *                     @OA\Property(property="wallet_id", type="string", example="507f1f77bcf86cd799439012")
-     *                 )
+     *                 @OA\Property(property="access_token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."),
+     *                 @OA\Property(property="refresh_token", type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...")
      *             )
      *         )
      *     ),
@@ -524,10 +519,17 @@ class AuthController extends Controller
                 array_diff_key($validated, ['identifier' => '', 'otp_code' => ''])
             );
 
+            // Générer les tokens pour l'utilisateur nouvellement créé
+            $passportService = app(MongoPassportService::class);
+            $tokenResult = $passportService->createPersonalAccessToken($result['user']);
+
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],
-                'data' => $result['user']
+                'data' => [
+                    'access_token' => $tokenResult->accessToken,
+                    'refresh_token' => $tokenResult->refreshToken
+                ]
             ], 201);
         } catch (\Exception $e) {
             Log::error('Erreur lors de la confirmation d\'inscription', [
