@@ -113,36 +113,59 @@ class TransferService extends BaseService implements TransferServiceInterface
 
             $fullMeta = array_merge($defaultMeta, $metadata);
 
-            // Note: Transactions MongoDB nécessitent un replica set
-            // Pour le développement local, on exécute sans transaction
-            // TODO: Réactiver les transactions en production avec replica set
-
-            // Créer la transaction de débit (expéditeur)
-            $debitTransaction = $this->transferRepository->createTransferTransaction([
-                'wallet_id' => $senderWallet->id,
-                'type' => 'transfer',
-                'amount' => -$amount, // Montant négatif pour le débit
-                'status' => 'success',
-                'reference' => $debitRef,
-                'meta' => array_merge($fullMeta, ['transfer_type' => 'debit'])
-            ]);
-
-            // Créer la transaction de crédit (destinataire)
-            $creditTransaction = $this->transferRepository->createTransferTransaction([
-                'wallet_id' => $receiverWallet->id,
-                'type' => 'transfer',
-                'amount' => $amount, // Montant positif pour le crédit
-                'status' => 'success',
-                'reference' => $creditRef,
-                'meta' => array_merge($fullMeta, ['transfer_type' => 'credit'])
-            ]);
-
-            // Mettre à jour les soldes
+            // Exécuter les opérations de transfert séquentiellement (pas de transaction MongoDB sur instance standalone)
+            $debitTransaction = null;
+            $creditTransaction = null;
+            $senderBalanceUpdated = false;
+            $receiverBalanceUpdated = false;
             $newSenderBalance = $senderWallet->balance - $amount;
             $newReceiverBalance = $receiverWallet->balance + $amount;
 
-            $this->transferRepository->updateWalletBalance($senderWallet->id, $newSenderBalance);
-            $this->transferRepository->updateWalletBalance($receiverWallet->id, $newReceiverBalance);
+            try {
+                // Créer la transaction de débit (expéditeur)
+                $debitTransaction = $this->transferRepository->createTransferTransaction([
+                    'wallet_id' => $senderWallet->id,
+                    'type' => 'transfer',
+                    'amount' => -$amount, // Montant négatif pour le débit
+                    'status' => 'success',
+                    'reference' => $debitRef,
+                    'meta' => array_merge($fullMeta, ['transfer_type' => 'debit'])
+                ]);
+
+                // Créer la transaction de crédit (destinataire)
+                $creditTransaction = $this->transferRepository->createTransferTransaction([
+                    'wallet_id' => $receiverWallet->id,
+                    'type' => 'transfer',
+                    'amount' => $amount, // Montant positif pour le crédit
+                    'status' => 'success',
+                    'reference' => $creditRef,
+                    'meta' => array_merge($fullMeta, ['transfer_type' => 'credit'])
+                ]);
+
+                // Mettre à jour les soldes
+                $this->transferRepository->updateWalletBalance($senderWallet->id, $newSenderBalance);
+                $senderBalanceUpdated = true;
+
+                $this->transferRepository->updateWalletBalance($receiverWallet->id, $newReceiverBalance);
+                $receiverBalanceUpdated = true;
+            } catch (Exception $e) {
+                // Rollback manuel en cas d'erreur
+                if ($receiverBalanceUpdated) {
+                    $this->transferRepository->updateWalletBalance($receiverWallet->id, $receiverWallet->balance);
+                }
+                if ($senderBalanceUpdated) {
+                    $this->transferRepository->updateWalletBalance($senderWallet->id, $senderWallet->balance);
+                }
+                if ($creditTransaction) {
+                    // Supprimer la transaction crédit si elle existe
+                    $this->transferRepository->delete($creditTransaction->id);
+                }
+                if ($debitTransaction) {
+                    // Supprimer la transaction débit si elle existe
+                    $this->transferRepository->delete($debitTransaction->id);
+                }
+                throw $e;
+            }
 
             // Notifications SMS (nouveau solde)
             try {
