@@ -387,15 +387,23 @@ class AuthController extends Controller
     /**
      * @OA\Get(
      *     path="/auth/me",
-     *     summary="Obtenir les informations de l'utilisateur connecté",
-     *     description="Récupère les informations du profil de l'utilisateur authentifié",
+     *     summary="Obtenir les informations complètes de l'utilisateur connecté",
+     *     description="Récupère les informations du profil, comptes et historique des transactions de l'utilisateur authentifié",
      *     operationId="me",
      *     tags={"Authentication"},
      *     security={{"bearerAuth":{}}},
      *     @OA\Response(
      *         response=200,
      *         description="Informations utilisateur récupérées",
-     *         @OA\JsonContent(ref="#/components/schemas/User")
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Informations utilisateur récupérées"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(property="comptes", type="array", description="Liste des comptes de l'utilisateur"),
+     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions")
+     *             )
+     *         )
      *     ),
      *     @OA\Response(
      *         response=401,
@@ -414,7 +422,33 @@ class AuthController extends Controller
             return $this->unauthorizedResponse('Utilisateur non authentifié');
         }
 
-        return $this->successResponse($user, 'Informations utilisateur récupérées');
+        // Récupérer les comptes de l'utilisateur
+        $walletRepository = app(\App\Repositories\WalletRepository::class);
+        $wallets = $walletRepository->getUserWallets($user->id);
+
+        $comptes = array_map(function ($wallet) {
+            $type = (isset($wallet['is_main']) && $wallet['is_main']) ? 'principal' : 'secondaire';
+            $prefix = $type === 'principal' ? 'Principal' : 'Secondaire';
+            $timestamp = strtotime($wallet['created_at']);
+            $numero_compte = $prefix . $timestamp;
+
+            return [
+                'numero_compte' => $numero_compte,
+                'solde' => $wallet['balance'],
+                'devise' => $wallet['currency'],
+                'type' => $type
+            ];
+        }, $wallets);
+
+        // Récupérer l'historique des transactions
+        $historyService = app(\App\Services\Contracts\HistoryServiceInterface::class);
+        $history = $historyService->getUserHistory($user->telephone, 1, 50); // Récupérer jusqu'à 50 transactions récentes
+
+        return $this->successResponse([
+            'user' => $user,
+            'comptes' => $comptes,
+            'historique_transactions' => \App\Http\Resources\TransactionHistoryResource::collection(collect($history['transactions']))
+        ], 'Informations utilisateur récupérées');
     }
 
 

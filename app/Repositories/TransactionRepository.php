@@ -16,13 +16,19 @@ class TransactionRepository implements TransactionRepositoryInterface
     {
         $user = User::where('telephone', $telephone)->first();
 
-        if (!$user || !$user->wallet) {
+        if (!$user) {
+            return collect([]);
+        }
+
+        $walletIds = $user->wallets->pluck('id')->toArray();
+
+        if (empty($walletIds)) {
             return collect([]);
         }
 
         $offset = ($page - 1) * $limit;
 
-        return Transaction::where('wallet_id', $user->wallet->id)
+        return Transaction::whereIn('wallet_id', $walletIds)
             ->where('type', $type)
             ->orderBy('created_at', 'desc')
             ->skip($offset)
@@ -37,13 +43,19 @@ class TransactionRepository implements TransactionRepositoryInterface
     {
         $user = User::where('telephone', $telephone)->first();
 
-        if (!$user || !$user->wallet) {
+        if (!$user) {
+            return collect([]);
+        }
+
+        $walletIds = $user->wallets->pluck('id')->toArray();
+
+        if (empty($walletIds)) {
             return collect([]);
         }
 
         $offset = ($page - 1) * $limit;
 
-        return Transaction::where('wallet_id', $user->wallet->id)
+        return Transaction::whereIn('wallet_id', $walletIds)
             ->orderBy('created_at', 'desc')
             ->skip($offset)
             ->take($limit)
@@ -57,11 +69,17 @@ class TransactionRepository implements TransactionRepositoryInterface
     {
         $user = User::where('telephone', $telephone)->first();
 
-        if (!$user || !$user->wallet) {
+        if (!$user) {
             return 0;
         }
 
-        $query = Transaction::where('wallet_id', $user->wallet->id);
+        $walletIds = $user->wallets->pluck('id')->toArray();
+
+        if (empty($walletIds)) {
+            return 0;
+        }
+
+        $query = Transaction::whereIn('wallet_id', $walletIds);
 
         if ($type) {
             $query->where('type', $type);
@@ -125,11 +143,17 @@ class TransactionRepository implements TransactionRepositoryInterface
     ): Collection {
         $user = User::where('telephone', $telephone)->first();
 
-        if (!$user || !$user->wallet) {
+        if (!$user) {
             return collect([]);
         }
 
-        $query = Transaction::where('wallet_id', $user->wallet->id)
+        $walletIds = $user->wallets->pluck('id')->toArray();
+
+        if (empty($walletIds)) {
+            return collect([]);
+        }
+
+        $query = Transaction::whereIn('wallet_id', $walletIds)
             ->whereBetween('created_at', [$startDate, $endDate]);
 
         if ($type) {
@@ -146,13 +170,19 @@ class TransactionRepository implements TransactionRepositoryInterface
     {
         $user = User::where('telephone', $telephone)->first();
 
-        if (!$user || !$user->wallet) {
+        if (!$user) {
+            return collect([]);
+        }
+
+        $walletIds = $user->wallets->pluck('id')->toArray();
+
+        if (empty($walletIds)) {
             return collect([]);
         }
 
         $offset = ($page - 1) * $limit;
 
-        return Transaction::where('wallet_id', $user->wallet->id)
+        return Transaction::whereIn('wallet_id', $walletIds)
             ->with(['wallet.user', 'logs'])
             ->orderBy('created_at', 'desc')
             ->skip($offset)
