@@ -407,8 +407,17 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="Informations utilisateur récupérées"),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="user", ref="#/components/schemas/User"),
-     *                 @OA\Property(property="comptes", type="array", description="Liste des comptes de l'utilisateur"),
-     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions du compte spécifié ou principal")
+     *                 @OA\Property(property="comptes", type="array", description="Liste des comptes de l'utilisateur",
+     *                     @OA\Items(type="object",
+     *                         @OA\Property(property="numero_compte", type="string", example="Principal1731580000"),
+     *                         @OA\Property(property="solde", type="number", format="float", example=1947500),
+     *                         @OA\Property(property="devise", type="string", example="XOF"),
+     *                         @OA\Property(property="type", type="string", example="principal")
+     *                     )
+     *                 ),
+     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions du compte spécifié ou principal",
+     *                     @OA\Items(ref="#/components/schemas/Transaction")
+     *                 )
      *             )
      *         )
      *     ),
