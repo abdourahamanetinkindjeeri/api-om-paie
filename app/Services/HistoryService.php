@@ -110,6 +110,39 @@ class HistoryService implements HistoryServiceInterface
     }
 
     /**
+     * Récupère l'historique des transactions d'un compte spécifique
+     */
+    public function getAccountHistory(string $telephone, string $walletId, int $page = 1, int $limit = 10): array
+    {
+        try {
+            $transactions = $this->transactionRepository->getAccountTransactions($telephone, $walletId, $page, $limit);
+            $totalCount = $this->transactionRepository->countAccountTransactions($telephone, $walletId);
+
+            $history = $transactions->map(function ($transaction) {
+                return $this->formatTransaction($transaction);
+            });
+
+            $pagination = $this->calculatePagination($totalCount, $page, $limit);
+
+            return [
+                'transactions' => $history,
+                'pagination' => $pagination
+            ];
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération de l\'historique du compte', [
+                'telephone' => $telephone,
+                'wallet_id' => $walletId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'transactions' => [],
+                'pagination' => $this->calculatePagination(0, $page, $limit)
+            ];
+        }
+    }
+
+    /**
      * Formate une transaction pour l'affichage
      */
     private function formatTransaction(Transaction $transaction, string $type = null): array

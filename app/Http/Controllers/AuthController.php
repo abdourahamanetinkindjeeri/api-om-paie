@@ -101,7 +101,7 @@ class AuthController extends Controller
      *         @OA\JsonContent(
      *             required={"telephone", "code"},
      *             @OA\Property(property="telephone", type="string", example="+221771234567"),
-     *             @OA\Property(property="code", type="string", example="1234")
+     *             @OA\Property(property="code", type="string", example="4321")
      *         )
      *     ),
      *     @OA\Response(
@@ -310,44 +310,6 @@ class AuthController extends Controller
         return $this->successResponse(null, 'Déconnecté avec succès');
     }
 
-    /**
-     * @OA\Post(
-     *     path="/auth/refresh",
-     *     summary="Rafraîchir le jeton d'accès",
-     *     description="Retourne un nouveau access_token (15 minutes) et un refresh_token rotaté (30 jours).",
-     *     operationId="refreshToken",
-     *     tags={"Authentication"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"refresh_token"},
-     *             @OA\Property(property="refresh_token", type="string", example="eyJ..."),
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Token rafraîchi",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Token rafraîchi"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
-     *                 @OA\Property(property="access_token", type="string"),
-     *                 @OA\Property(property="token_type", type="string", example="Bearer"),
-     *                 @OA\Property(property="expires_at", type="string", format="date-time"),
-     *                 @OA\Property(property="expires_in", type="integer", example=900),
-     *                 @OA\Property(property="refresh_token", type="string"),
-     *                 @OA\Property(property="refresh_expires_at", type="string", format="date-time"),
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Refresh token invalide ou expiré",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
     public function refresh(Request $request)
     {
         $request->validate([
@@ -458,7 +420,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/auth/confirmation",
+     *     path="/auth/register/confirmation",
      *     summary="Confirmer l'inscription avec le code OTP",
      *     description="Valide le code OTP et crée le compte utilisateur avec son wallet",
      *     operationId="confirmRegistration",
@@ -469,12 +431,6 @@ class AuthController extends Controller
      *             required={"telephone", "code_otp"},
      *             @OA\Property(property="telephone", type="string", example="+221771234567", description="Téléphone utilisé pour l'inscription"),
      *             @OA\Property(property="code_otp", type="string", example="123456", description="Code OTP à 6 chiffres"),
-     *             @OA\Property(property="nom", type="string", example="Diop", description="Nom (optionnel si déjà fourni)"),
-     *             @OA\Property(property="prenom", type="string", example="Mamadou", description="Prénom (optionnel si déjà fourni)"),
-     *             @OA\Property(property="type_piece", type="string", enum={"cin", "passport"}, example="cin", description="Type de pièce (optionnel)"),
-     *             @OA\Property(property="numero", type="string", example="A1234567890123", description="Numéro de pièce (optionnel)"),
-     *             @OA\Property(property="adresse", type="string", example="Dakar", description="Adresse (optionnel)"),
-     *             @OA\Property(property="code", type="string", example="1234", description="Code PIN (optionnel)")
      *         )
      *     ),
      *     @OA\Response(

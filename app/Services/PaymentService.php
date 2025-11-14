@@ -33,7 +33,7 @@ class PaymentService extends BaseService implements PaymentServiceInterface
     /**
      * Effectuer un paiement vers un marchand avec validation et traitement spécialisés
      */
-    public function payMerchant(object $user, string $merchantCode, float $amount, array $metadata = []): array
+    public function payMerchant(object $user, string $merchantCode, float $amount, array $metadata = [], ?string $userWalletId = null): array
     {
         // 1. Validation complète de la demande de paiement
         $validation = $this->paymentValidator->validatePaymentRequest($user, $merchantCode, $amount, $metadata);
@@ -43,7 +43,17 @@ class PaymentService extends BaseService implements PaymentServiceInterface
 
         // 2. Récupération des entités nécessaires
         $merchant = $this->paymentRepository->findMerchantByCode($merchantCode);
-        $userWallet = $user->wallet;
+
+        // Utiliser le wallet spécifié ou le wallet de l'utilisateur
+        if ($userWalletId) {
+            $userWallet = $this->paymentRepository->findWalletById($userWalletId);
+            if (!$userWallet || $userWallet->user_id !== $user->id) {
+                throw new Exception('Wallet spécifié invalide ou n\'appartient pas à l\'utilisateur');
+            }
+        } else {
+            $userWallet = $user->wallet;
+        }
+
         $merchantWallet = $this->paymentRepository->getMerchantWallet($merchant->id);
 
         // 3. Validation des soldes

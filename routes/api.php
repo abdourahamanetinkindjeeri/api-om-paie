@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ComptesController;
+use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\QrCodeController;
@@ -19,15 +21,6 @@ use App\Http\Controllers\QrCodeController;
 |
 */
 
-// Health check endpoint pour Render
-Route::get('/health', function () {
-    return response()->json([
-        'status' => 'ok',
-        'timestamp' => now()->toISOString(),
-        'version' => '3.0.0'
-    ]);
-});
-
 // Status endpoint simple
 Route::get('/status', function () {
     return response()->json(['status' => 'running']);
@@ -36,7 +29,7 @@ Route::get('/status', function () {
 Route::middleware('throttle:10,1')->prefix('auth')->group(function () {
     // Inscription - OTP flow: init via /register, confirm via /confirmation, resend via /resend
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/confirmation', [AuthController::class, 'confirm']);
+    Route::post('/register/confirmation', [AuthController::class, 'confirm']);
     Route::post('/resend', [AuthController::class, 'resendOtp']);
 
     // Connexion (2FA: étape 1 - vérifier PIN et envoyer OTP)
@@ -65,12 +58,27 @@ Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('transfer')->grou
 
     // Vérifier si un numéro existe
     Route::post('/check-number', [TransferController::class, 'checkNumber']);
+});
 
-    // Obtenir le solde de l'utilisateur connecté
-    Route::get('/balance', [TransferController::class, 'getBalance']);
+// Routes pour les comptes (protégées par authentification)
+Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('comptes')->group(function () {
+    // Lister tous les comptes de l'utilisateur
+    Route::get('/', [ComptesController::class, 'getUserComptes']);
 
-    // Obtenir l'historique des transferts (ancien endpoint, garde pour compatibilité)
-    Route::get('/history', [TransferController::class, 'getTransferHistory']);
+    // Obtenir les informations d'un compte spécifique
+    Route::get('/{numeroCompte}', [ComptesController::class, 'getBalance']);
+
+    // Obtenir le solde d'un compte spécifique
+    Route::get('/{numeroCompte}/balance', [ComptesController::class, 'getAccountBalance']);
+
+    // Obtenir l'historique d'un compte spécifique
+    Route::get('/{numeroCompte}/history', [ComptesController::class, 'getAccountHistory']);
+
+    // Effectuer un transfert depuis un compte spécifique
+    Route::post('/{numeroCompte}/transfer', [ComptesController::class, 'transferFromAccount']);
+
+    // Effectuer un paiement depuis un compte spécifique
+    Route::post('/{numeroCompte}/payment', [ComptesController::class, 'payFromAccount']);
 });
 
 // Routes pour les paiements marchands (protégées par authentification)
@@ -84,9 +92,6 @@ Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('payment')->group
     // Obtenir les informations d'un marchand (publiques)
     Route::post('/merchant-info', [PaymentController::class, 'getMerchantInfo']);
 
-    // Obtenir l'historique des paiements de l'utilisateur connecté
-    Route::get('/history', [PaymentController::class, 'getUserPaymentHistory']);
-
     // Obtenir l'historique des paiements reçus (pour les marchands)
     Route::post('/merchant-history', [PaymentController::class, 'getMerchantPaymentHistory']);
 });
@@ -94,16 +99,16 @@ Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('payment')->group
 // Routes pour l'historique unifié (protégées par authentification)
 Route::middleware(['mongo.passport', 'throttle:60,1'])->prefix('history')->group(function () {
     // Historique complet (paiements + transferts) trié par date décroissante
-    Route::get('/', [\App\Http\Controllers\HistoryController::class, 'getUserHistory']);
+    Route::get('/', [HistoryController::class, 'getUserHistory']);
 
     // Historique des transferts seulement
-    Route::get('/transfers', [\App\Http\Controllers\HistoryController::class, 'getUserTransferHistory']);
+    Route::get('/transfers', [HistoryController::class, 'getUserTransferHistory']);
 
     // Historique des paiements seulement
-    Route::get('/payments', [\App\Http\Controllers\HistoryController::class, 'getUserPaymentHistory']);
+    Route::get('/payments', [HistoryController::class, 'getUserPaymentHistory']);
 
     // Statistiques utilisateur
-    Route::get('/stats', [\App\Http\Controllers\HistoryController::class, 'getUserStats']);
+    Route::get('/stats', [HistoryController::class, 'getUserStats']);
 });
 
 // Routes pour les QR codes (protégées par authentification)

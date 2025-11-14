@@ -56,6 +56,14 @@ class PaymentRepository extends BaseRepository implements PaymentRepositoryInter
     }
 
     /**
+     * Trouver un wallet par son ID
+     */
+    public function findWalletById(string $walletId): ?Wallet
+    {
+        return Wallet::find($walletId);
+    }
+
+    /**
      * Créer une transaction de paiement
      *
      * @param array $data

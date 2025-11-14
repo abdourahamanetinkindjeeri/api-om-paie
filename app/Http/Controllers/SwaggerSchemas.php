@@ -49,6 +49,26 @@ namespace App\Http\Controllers;
  * )
  *
  * @OA\Schema(
+ *     schema="Payment",
+ *     type="object",
+ *     title="Paiement",
+ *     description="Modèle de paiement",
+ *     @OA\Property(property="id", type="string", example="64f7b1a2c5d4e123456789ae"),
+ *     @OA\Property(property="type", type="string", example="payment"),
+ *     @OA\Property(property="montant", type="number", format="float", example=2500),
+ *     @OA\Property(property="currency", type="string", example="XOF"),
+ *     @OA\Property(property="expediteur_telephone", type="string", example="+221771234567"),
+ *     @OA\Property(property="destinataire_telephone", type="string", example="+221338901234"),
+ *     @OA\Property(property="status", type="string", enum={"pending", "completed", "failed", "cancelled"}, example="completed"),
+ *     @OA\Property(property="metadata", type="object",
+ *         @OA\Property(property="code_marchand", type="string", example="BOUT001"),
+ *         @OA\Property(property="description", type="string", example="Achat produits")
+ *     ),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
  *     schema="Merchant",
  *     type="object",
  *     title="Marchand",

@@ -32,7 +32,7 @@ class TransferService extends BaseService implements TransferServiceInterface
     /**
      * Effectuer un transfert entre utilisateurs avec validation et traitement spécialisés
      */
-    public function transfer(string $senderNumber, string $receiverNumber, float $amount, array $metadata = []): array
+    public function transfer(string $senderNumber, string $receiverNumber, float $amount, array $metadata = [], ?string $senderWalletId = null): array
     {
         // 1. Validation complète de la demande de transfert
         $validation = $this->transferValidator->validateTransferRequest($senderNumber, $receiverNumber, $amount, $metadata);
@@ -43,7 +43,17 @@ class TransferService extends BaseService implements TransferServiceInterface
         // 2. Récupération des entités nécessaires
         $sender = $this->transferRepository->findUserByNumber($senderNumber);
         $receiver = $this->transferRepository->findUserByNumber($receiverNumber);
-        $senderWallet = $this->transferRepository->getUserWallet($sender->id);
+
+        // Utiliser le wallet spécifié ou le wallet principal de l'expéditeur
+        if ($senderWalletId) {
+            $senderWallet = $this->transferRepository->findWalletById($senderWalletId);
+            if (!$senderWallet || $senderWallet->user_id !== $sender->id) {
+                throw new Exception('Wallet spécifié invalide ou n\'appartient pas à l\'expéditeur');
+            }
+        } else {
+            $senderWallet = $this->transferRepository->getUserWallet($sender->id);
+        }
+
         $receiverWallet = $this->transferRepository->getUserWallet($receiver->id);
 
         // 3. Validation des soldes

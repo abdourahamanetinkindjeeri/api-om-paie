@@ -164,10 +164,16 @@ class MongoPassportService
             $userId = $payload['user_id'];
             $tokenId = $payload['token_id'];
 
+            // Vérifier que la clé secrète Passport est configurée
+            $passportSecret = config('passport.secret');
+            if (!$passportSecret) {
+                return null;
+            }
+
             // Valider la signature avec Lcobucci
             $config = Configuration::forSymmetricSigner(
                 new Sha256(),
-                InMemory::plainText(config('passport.secret'))
+                InMemory::plainText($passportSecret)
             );
 
             $token = $config->parser()->parse($refreshTokenJwt);

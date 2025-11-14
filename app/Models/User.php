@@ -142,13 +142,19 @@ class User extends Model implements AuthenticatableContract
      * Relations
      */
 
-    // Un utilisateur possède un seul wallet
-    public function wallet()
+    // Un utilisateur possède plusieurs wallets
+    public function wallets()
     {
-        return $this->hasOne(Wallet::class);
+        return $this->hasMany(Wallet::class);
     }
 
-    // Un utilisateur a plusieurs transactions via son wallet
+    // Un utilisateur possède un wallet principal (pour compatibilité)
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class)->where('is_main', true);
+    }
+
+    // Un utilisateur a plusieurs transactions via ses wallets
     public function transactions()
     {
         return $this->hasManyThrough(Transaction::class, Wallet::class);

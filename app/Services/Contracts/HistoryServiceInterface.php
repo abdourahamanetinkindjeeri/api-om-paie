@@ -18,4 +18,9 @@ interface HistoryServiceInterface
      * Récupère l'historique des paiements d'un utilisateur
      */
     public function getUserPaymentHistory(string $telephone, int $page = 1, int $limit = 10): array;
+
+    /**
+     * Récupère l'historique des transactions d'un compte spécifique
+     */
+    public function getAccountHistory(string $telephone, string $walletId, int $page = 1, int $limit = 10): array;
 }

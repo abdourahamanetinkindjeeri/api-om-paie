@@ -36,6 +36,14 @@ class TransferRepository extends BaseRepository implements TransferRepositoryInt
     }
 
     /**
+     * Trouver un wallet par son ID
+     */
+    public function findWalletById(string $walletId): ?Wallet
+    {
+        return Wallet::find($walletId);
+    }
+
+    /**
      * Créer une transaction de transfert
      *
      * @param array $data

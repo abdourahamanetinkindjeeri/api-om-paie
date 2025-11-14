@@ -14,6 +14,23 @@ class TransactionHistoryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $data = $this->resource;
+
+        // Support for both model instances and arrays
+        if (is_array($data)) {
+            return [
+                'id' => $data['id'] ?? null,
+                'reference' => $data['reference'] ?? null,
+                'type' => $data['type'] ?? null,
+                'montant' => isset($data['amount']) ? abs($data['amount']) : null,
+                'direction' => isset($data['amount']) ? ($data['amount'] > 0 ? 'credit' : 'debit') : null,
+                'statut' => $data['status'] ?? null,
+                'date_transaction' => isset($data['date']) ? $data['date'] : (isset($data['created_at']) ? $data['created_at'] : null),
+                'metadata' => $data['meta'] ?? $data['metadata'] ?? [],
+            ];
+        }
+
+        // Default behavior for model instances
         return [
             'id' => $this->id,
             'reference' => $this->reference,

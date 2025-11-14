@@ -129,10 +129,20 @@ class AuthService
 
         $tokenResult = $user->createToken('auth_token');
 
+        // Vérifier que la clé secrète Passport est configurée
+        $passportSecret = config('passport.secret');
+        if (!$passportSecret) {
+            Log::error('Clé secrète Passport non configurée');
+            return [
+                'error' => 'configuration_error',
+                'message' => 'Service temporairement indisponible',
+            ];
+        }
+
         // Générer un JWT refresh token signé avec HS256
         $config = Configuration::forSymmetricSigner(
             new Sha256(),
-            InMemory::plainText(config('passport.secret'))
+            InMemory::plainText($passportSecret)
         );
 
         $now = new DateTimeImmutable();

@@ -17,7 +17,7 @@ class Wallet extends Model
     protected $connection = 'mongodb';
     protected $collection = 'wallets';
 
-    protected $fillable = ['user_id', 'merchant_id', 'balance', 'currency'];
+    protected $fillable = ['user_id', 'merchant_id', 'balance', 'currency', 'is_main'];
 
     public function user()
     {

@@ -207,7 +207,7 @@
                                     },
                                     "code": {
                                         "type": "string",
-                                        "example": "1234"
+                                        "example": "4321"
                                     }
                                 },
                                 "type": "object"
@@ -524,97 +524,6 @@
                 ]
             }
         },
-        "/auth/refresh": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Rafraîchir le jeton d'accès",
-                "description": "Retourne un nouveau access_token (15 minutes) et un refresh_token rotaté (30 jours).",
-                "operationId": "refreshToken",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "refresh_token"
-                                ],
-                                "properties": {
-                                    "refresh_token": {
-                                        "type": "string",
-                                        "example": "eyJ..."
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Token rafraîchi",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Token rafraîchi"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "user": {
-                                                    "$ref": "#/components/schemas/User"
-                                                },
-                                                "access_token": {
-                                                    "type": "string"
-                                                },
-                                                "token_type": {
-                                                    "type": "string",
-                                                    "example": "Bearer"
-                                                },
-                                                "expires_at": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                },
-                                                "expires_in": {
-                                                    "type": "integer",
-                                                    "example": 900
-                                                },
-                                                "refresh_token": {
-                                                    "type": "string"
-                                                },
-                                                "refresh_expires_at": {
-                                                    "type": "string",
-                                                    "format": "date-time"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Refresh token invalide ou expiré",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/auth/unlock-account": {
             "post": {
                 "tags": [
@@ -722,7 +631,7 @@
                 ]
             }
         },
-        "/auth/confirmation": {
+        "/auth/register/confirmation": {
             "post": {
                 "tags": [
                     "Authentication"
@@ -749,40 +658,6 @@
                                         "description": "Code OTP à 6 chiffres",
                                         "type": "string",
                                         "example": "123456"
-                                    },
-                                    "nom": {
-                                        "description": "Nom (optionnel si déjà fourni)",
-                                        "type": "string",
-                                        "example": "Diop"
-                                    },
-                                    "prenom": {
-                                        "description": "Prénom (optionnel si déjà fourni)",
-                                        "type": "string",
-                                        "example": "Mamadou"
-                                    },
-                                    "type_piece": {
-                                        "description": "Type de pièce (optionnel)",
-                                        "type": "string",
-                                        "enum": [
-                                            "cin",
-                                            "passport"
-                                        ],
-                                        "example": "cin"
-                                    },
-                                    "numero": {
-                                        "description": "Numéro de pièce (optionnel)",
-                                        "type": "string",
-                                        "example": "A1234567890123"
-                                    },
-                                    "adresse": {
-                                        "description": "Adresse (optionnel)",
-                                        "type": "string",
-                                        "example": "Dakar"
-                                    },
-                                    "code": {
-                                        "description": "Code PIN (optionnel)",
-                                        "type": "string",
-                                        "example": "1234"
                                     }
                                 },
                                 "type": "object"
@@ -970,6 +845,589 @@
                         }
                     }
                 }
+            }
+        },
+        "/comptes/{numeroCompte}": {
+            "get": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Obtenir les informations d'un compte",
+                "description": "Récupère les informations d'un compte spécifique (solde, etc.)",
+                "operationId": "getCompteInfo",
+                "parameters": [
+                    {
+                        "name": "numeroCompte",
+                        "in": "path",
+                        "description": "Numéro du compte (format: Principal{timestamp} ou Secondaire{timestamp})",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Principal1731580000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Informations du compte récupérées avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Informations du compte récupérées avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "numero_compte": {
+                                                    "type": "string",
+                                                    "example": "a05ab654-1a7e-47ca-a9f0-3af7926e5e82"
+                                                },
+                                                "solde": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 1947500
+                                                },
+                                                "devise": {
+                                                    "type": "string",
+                                                    "example": "XOF"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé - compte n'appartient pas à l'utilisateur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/comptes": {
+            "get": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Lister tous les comptes de l'utilisateur",
+                "description": "Récupère la liste de tous les comptes (principal et secondaires) de l'utilisateur authentifié",
+                "operationId": "getUserComptes",
+                "responses": {
+                    "200": {
+                        "description": "Comptes récupérés avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Comptes récupérés avec succès"
+                                        },
+                                        "comptes": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "numero_compte": {
+                                                        "type": "string",
+                                                        "example": "a05ab654-1a7e-47ca-a9f0-3af7926e5e82"
+                                                    },
+                                                    "solde": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 1947500
+                                                    },
+                                                    "devise": {
+                                                        "type": "string",
+                                                        "example": "XOF"
+                                                    },
+                                                    "type": {
+                                                        "type": "string",
+                                                        "example": "principal"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/comptes/{numeroCompte}/balance": {
+            "get": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Obtenir le solde d'un compte",
+                "description": "Récupère uniquement le solde d'un compte spécifique",
+                "operationId": "getAccountBalance",
+                "parameters": [
+                    {
+                        "name": "numeroCompte",
+                        "in": "path",
+                        "description": "Numéro du compte (format: Principal{timestamp} ou Secondaire{timestamp})",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Principal1731580000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Solde récupéré avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solde récupéré avec succès"
+                                        },
+                                        "solde": {
+                                            "type": "number",
+                                            "format": "float",
+                                            "example": 1947500
+                                        },
+                                        "numero_compte": {
+                                            "type": "string",
+                                            "example": "Principal1731580000"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé - compte n'appartient pas à l'utilisateur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/comptes/{numeroCompte}/history": {
+            "get": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Obtenir l'historique d'un compte",
+                "description": "Récupère l'historique des transactions (transferts et paiements) pour un compte spécifique",
+                "operationId": "getAccountHistory",
+                "parameters": [
+                    {
+                        "name": "numeroCompte",
+                        "in": "path",
+                        "description": "Numéro du compte (format: Principal{timestamp} ou Secondaire{timestamp})",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Principal1731580000"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Numéro de la page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique du compte récupéré avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Historique du compte récupéré avec succès"
+                                        },
+                                        "transactions": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 25
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé - compte n'appartient pas à l'utilisateur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/comptes/{numeroCompte}/transfer": {
+            "post": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Effectuer un transfert depuis un compte spécifique",
+                "description": "Effectue un transfert d'argent depuis le compte spécifié vers un destinataire",
+                "operationId": "transferFromAccount",
+                "parameters": [
+                    {
+                        "name": "numeroCompte",
+                        "in": "path",
+                        "description": "Numéro du compte expéditeur (format: Principal{timestamp} ou Secondaire{timestamp})",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Principal1731580000"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "telephone",
+                                    "montant"
+                                ],
+                                "properties": {
+                                    "telephone": {
+                                        "description": "Numéro de téléphone du destinataire",
+                                        "type": "string",
+                                        "example": "+221781234567"
+                                    },
+                                    "montant": {
+                                        "description": "Montant à transférer",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 5000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfert effectué avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Transfert effectué avec succès"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Transaction"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé - compte n'appartient pas à l'utilisateur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/comptes/{numeroCompte}/payment": {
+            "post": {
+                "tags": [
+                    "Comptes"
+                ],
+                "summary": "Effectuer un paiement depuis un compte spécifique",
+                "description": "Effectue un paiement vers un marchand depuis le compte spécifié",
+                "operationId": "payFromAccount",
+                "parameters": [
+                    {
+                        "name": "numeroCompte",
+                        "in": "path",
+                        "description": "Numéro du compte payeur (format: Principal{timestamp} ou Secondaire{timestamp})",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Principal1731580000"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code_marchand",
+                                    "montant"
+                                ],
+                                "properties": {
+                                    "code_marchand": {
+                                        "description": "Code du marchand",
+                                        "type": "string",
+                                        "example": "M001"
+                                    },
+                                    "montant": {
+                                        "description": "Montant à payer",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 5000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Paiement effectué avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Paiement effectué avec succès"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Payment"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé - compte n'appartient pas à l'utilisateur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/payment": {
@@ -1292,83 +1750,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Non authentifié",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/payment/history": {
-            "get": {
-                "tags": [
-                    "Payment"
-                ],
-                "summary": "Historique des paiements utilisateur",
-                "description": "Récupère l'historique des paiements effectués par l'utilisateur authentifié, triés par date décroissante (du plus récent au plus ancien)",
-                "operationId": "getUserPaymentHistory",
-                "parameters": [
-                    {
-                        "name": "page",
-                        "in": "query",
-                        "description": "Numéro de la page",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 1,
-                            "example": 1
-                        }
-                    },
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "description": "Nombre d'éléments par page",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 10,
-                            "example": 10
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Historique des paiements récupéré avec succès (triés par date décroissante - plus récents en premier)",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Historique des paiements récupéré avec succès"
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Transaction"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
                                 }
                             }
                         }
@@ -1920,104 +2301,6 @@
                     }
                 ]
             }
-        },
-        "/transfer/history": {
-            "get": {
-                "tags": [
-                    "Transfer"
-                ],
-                "summary": "Historique des transferts",
-                "description": "Récupère l'historique des transferts de l'utilisateur authentifié (envoyés et reçus), triés par date décroissante (du plus récent au plus ancien)",
-                "operationId": "getTransferHistory",
-                "parameters": [
-                    {
-                        "name": "page",
-                        "in": "query",
-                        "description": "Numéro de la page",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 1,
-                            "example": 1
-                        }
-                    },
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "description": "Nombre d'éléments par page",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 10,
-                            "example": 10
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Historique récupéré avec succès (triés par date décroissante - plus récents en premier)",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Historique récupéré avec succès"
-                                        },
-                                        "transfers": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Transaction"
-                                            }
-                                        },
-                                        "pagination": {
-                                            "properties": {
-                                                "current_page": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "per_page": {
-                                                    "type": "integer",
-                                                    "example": 10
-                                                },
-                                                "total": {
-                                                    "type": "integer",
-                                                    "example": 25
-                                                },
-                                                "last_page": {
-                                                    "type": "integer",
-                                                    "example": 3
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Non authentifié",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
         }
     },
     "components": {
@@ -2145,6 +2428,69 @@
                     "metadata": {
                         "type": "object",
                         "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Payment": {
+                "title": "Paiement",
+                "description": "Modèle de paiement",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "example": "64f7b1a2c5d4e123456789ae"
+                    },
+                    "type": {
+                        "type": "string",
+                        "example": "payment"
+                    },
+                    "montant": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 2500
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "XOF"
+                    },
+                    "expediteur_telephone": {
+                        "type": "string",
+                        "example": "+221771234567"
+                    },
+                    "destinataire_telephone": {
+                        "type": "string",
+                        "example": "+221338901234"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "completed",
+                            "failed",
+                            "cancelled"
+                        ],
+                        "example": "completed"
+                    },
+                    "metadata": {
+                        "properties": {
+                            "code_marchand": {
+                                "type": "string",
+                                "example": "BOUT001"
+                            },
+                            "description": {
+                                "type": "string",
+                                "example": "Achat produits"
+                            }
+                        },
+                        "type": "object"
                     },
                     "created_at": {
                         "type": "string",
@@ -2299,6 +2645,10 @@
         {
             "name": "QR Code",
             "description": "Génération et lecture de QR codes pour les utilisateurs"
+        },
+        {
+            "name": "Comptes",
+            "description": "Comptes"
         }
     ]
 }

@@ -71,6 +71,50 @@ class TransactionRepository implements TransactionRepositoryInterface
     }
 
     /**
+     * Récupère les transactions d'un compte spécifique
+     */
+    public function getAccountTransactions(string $telephone, string $walletId, int $page = 1, int $limit = 10): Collection
+    {
+        // Vérifier que le wallet appartient bien à l'utilisateur
+        $user = User::where('telephone', $telephone)->first();
+        if (!$user) {
+            return collect([]);
+        }
+
+        $wallet = $user->wallets()->where('id', $walletId)->first();
+        if (!$wallet) {
+            return collect([]);
+        }
+
+        $offset = ($page - 1) * $limit;
+
+        return Transaction::where('wallet_id', $walletId)
+            ->orderBy('created_at', 'desc')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+    }
+
+    /**
+     * Compte le nombre de transactions d'un compte spécifique
+     */
+    public function countAccountTransactions(string $telephone, string $walletId): int
+    {
+        // Vérifier que le wallet appartient bien à l'utilisateur
+        $user = User::where('telephone', $telephone)->first();
+        if (!$user) {
+            return 0;
+        }
+
+        $wallet = $user->wallets()->where('id', $walletId)->first();
+        if (!$wallet) {
+            return 0;
+        }
+
+        return Transaction::where('wallet_id', $walletId)->count();
+    }
+
+    /**
      * Récupère les transactions par période
      */
     public function getUserTransactionsByPeriod(

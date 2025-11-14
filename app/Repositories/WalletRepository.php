@@ -14,11 +14,16 @@ class WalletRepository implements WalletRepositoryInterface
      */
     public function createForUser(string $userId, string $currency = 'XOF', float $initialBalance = 0.0): Wallet
     {
+        // Vérifier si l'utilisateur a déjà un wallet principal
+        $hasMainWallet = Wallet::where('user_id', $userId)->where('is_main', true)->exists();
+        $isMain = !$hasMainWallet; // Le premier wallet est principal
+
         return Wallet::create([
             'id' => (string) Str::uuid(),
             'user_id' => $userId,
             'balance' => $initialBalance,
-            'currency' => $currency
+            'currency' => $currency,
+            'is_main' => $isMain
         ]);
     }
 
@@ -66,5 +71,21 @@ class WalletRepository implements WalletRepositoryInterface
     public function userHasWallet(string $userId): bool
     {
         return Wallet::where('user_id', $userId)->exists();
+    }
+
+    /**
+     * Récupère tous les wallets d'un utilisateur
+     */
+    public function getUserWallets(string $userId): array
+    {
+        return Wallet::where('user_id', $userId)->get()->toArray();
+    }
+
+    /**
+     * Récupère le wallet principal d'un utilisateur
+     */
+    public function getUserMainWallet(string $userId): ?Wallet
+    {
+        return Wallet::where('user_id', $userId)->where('is_main', true)->first();
     }
 }
