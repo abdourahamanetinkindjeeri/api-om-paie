@@ -112,6 +112,11 @@
                                                     "type": "string",
                                                     "example": "+221771234567"
                                                 },
+                                                "code_otp": {
+                                                    "description": "Code OTP généré (inclus pour les tests)",
+                                                    "type": "string",
+                                                    "example": "123456"
+                                                },
                                                 "expires_in_minutes": {
                                                     "type": "integer",
                                                     "example": 10
@@ -787,7 +792,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Compte créé avec succès",
+                        "description": "Compte créé avec succès - Tokens d'accès retournés",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -802,34 +807,13 @@
                                         },
                                         "data": {
                                             "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "example": "507f1f77bcf86cd799439011"
-                                                        },
-                                                        "telephone": {
-                                                            "type": "string",
-                                                            "example": "+221771234567"
-                                                        },
-                                                        "email": {
-                                                            "type": "string",
-                                                            "example": "user@example.com"
-                                                        },
-                                                        "nom": {
-                                                            "type": "string",
-                                                            "example": "Diop"
-                                                        },
-                                                        "prenom": {
-                                                            "type": "string",
-                                                            "example": "Mamadou"
-                                                        },
-                                                        "wallet_id": {
-                                                            "type": "string",
-                                                            "example": "507f1f77bcf86cd799439012"
-                                                        }
-                                                    },
-                                                    "type": "object"
+                                                "access_token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+                                                },
+                                                "refresh_token": {
+                                                    "type": "string",
+                                                    "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
                                                 }
                                             },
                                             "type": "object"
@@ -841,7 +825,7 @@
                         }
                     },
                     "400": {
-                        "description": "Code OTP invalide ou session expirée",
+                        "description": "Code OTP invalide, session expirée ou erreur de base de données",
                         "content": {
                             "application/json": {
                                 "schema": {

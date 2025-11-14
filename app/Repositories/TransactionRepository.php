@@ -5,8 +5,9 @@ namespace App\Repositories;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use App\Repositories\Contracts\TransactionRepositoryInterface;
 
-class TransactionRepository
+class TransactionRepository implements TransactionRepositoryInterface
 {
     /**
      * Récupère les transactions d'un utilisateur par type

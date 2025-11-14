@@ -32,6 +32,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Encryption Algorithm
+    |--------------------------------------------------------------------------
+    |
+    | Passport supports both RSA and HMAC encryption algorithms. By default,
+    | RSA is used with public/private keys. For HMAC, set this to 'HS256'
+    | and provide a secret key below.
+    |
+    */
+
+    'algorithm' => env('PASSPORT_ALGORITHM', 'HS256'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | HMAC Secret Key
+    |--------------------------------------------------------------------------
+    |
+    | If using HMAC encryption (HS256), provide a secret key here.
+    |
+    */
+
+    'secret' => env('PASSPORT_SECRET_KEY'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Passport Database Connection
     |--------------------------------------------------------------------------
     |

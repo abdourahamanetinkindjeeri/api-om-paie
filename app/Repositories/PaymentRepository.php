@@ -6,8 +6,10 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Merchant;
 use App\Models\Wallet;
+use Illuminate\Support\Facades\Cache;
+use App\Repositories\Contracts\PaymentRepositoryInterface;
 
-class PaymentRepository extends BaseRepository
+class PaymentRepository extends BaseRepository implements PaymentRepositoryInterface
 {
     public function __construct(Transaction $model)
     {
@@ -30,9 +32,11 @@ class PaymentRepository extends BaseRepository
      */
     public function findMerchantByCode(string $code): ?Merchant
     {
-        return Merchant::where('code', $code)
-            ->where('status', 'active')
-            ->first();
+        return Cache::remember("merchant_code_{$code}", 3600, function () use ($code) {
+            return Merchant::where('code', $code)
+                ->where('status', \App\Constants\Constants::STATUS_ACTIVE)
+                ->first();
+        });
     }
 
     /**

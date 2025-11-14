@@ -4,8 +4,10 @@ namespace App\Repositories;
 
 use App\Models\Wallet;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+use App\Repositories\Contracts\WalletRepositoryInterface;
 
-class WalletRepository
+class WalletRepository implements WalletRepositoryInterface
 {
     /**
      * Crée un nouveau wallet pour un utilisateur
@@ -33,7 +35,9 @@ class WalletRepository
      */
     public function findByUserId(string $userId): ?Wallet
     {
-        return Wallet::where('user_id', $userId)->first();
+        return Cache::remember("wallet_user_{$userId}", 1800, function () use ($userId) {
+            return Wallet::where('user_id', $userId)->first();
+        });
     }
 
     /**

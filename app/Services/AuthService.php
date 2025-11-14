@@ -9,6 +9,10 @@ use App\Services\Contracts\OtpServiceInterface;
 use App\Services\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Lcobucci\JWT\Configuration;
+use Lcobucci\JWT\Signer\Hmac\Sha256;
+use Lcobucci\JWT\Signer\Key\InMemory;
+use DateTimeImmutable;
 
 class AuthService
 {
@@ -125,14 +129,33 @@ class AuthService
 
         $tokenResult = $user->createToken('auth_token');
 
+        // Générer un JWT refresh token signé avec HS256
+        $config = Configuration::forSymmetricSigner(
+            new Sha256(),
+            InMemory::plainText(config('passport.secret'))
+        );
+
+        $now = new DateTimeImmutable();
+        $refreshExpires = $now->modify('+30 days'); // Expiration du refresh token
+
+        $refreshToken = $config->builder()
+            ->issuedBy(config('app.url'))
+            ->permittedFor(config('app.url'))
+            ->identifiedBy($tokenResult->token->id . '-refresh')
+            ->issuedAt($now)
+            ->expiresAt($refreshExpires)
+            ->withClaim('user_id', $user->id)
+            ->withClaim('token_id', $tokenResult->token->id)
+            ->getToken($config->signer(), $config->signingKey());
+
         return [
             'user'                 => $user,
             'access_token'         => $tokenResult->accessToken,
             'token_type'           => 'Bearer',
             'expires_at'           => $tokenResult->token->expires_at,
             'expires_in'           => 15 * 60, // 15 minutes
-            'refresh_token'        => $tokenResult->refreshToken ?? null,
-            'refresh_expires_at'   => $tokenResult->refresh_expires_at ?? null,
+            'refresh_token'        => $refreshToken->toString(),
+            'refresh_expires_at'   => $refreshExpires,
         ];
     }
 

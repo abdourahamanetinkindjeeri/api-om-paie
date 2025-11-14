@@ -494,8 +494,7 @@ class AuthController extends Controller
      *         description="Code OTP invalide, session expirée ou erreur de base de données",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Code OTP invalide ou expiré"),
-     *             @OA\Property(property="message", type="string", example="Erreur lors de la création du compte: Transaction numbers are only allowed on a replica set member or mongos")
+     *             @OA\Property(property="message", type="string", example="Code OTP invalide ou expiré")
      *         )
      *     ),
      *     @OA\Response(
@@ -520,8 +519,9 @@ class AuthController extends Controller
             );
 
             // Générer les tokens pour l'utilisateur nouvellement créé
+            $user = User::find($result['user']['id']);
             $passportService = app(MongoPassportService::class);
-            $tokenResult = $passportService->createPersonalAccessToken($result['user']);
+            $tokenResult = $passportService->createPersonalAccessToken($user);
 
             return response()->json([
                 'success' => true,

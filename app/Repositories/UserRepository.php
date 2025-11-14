@@ -4,15 +4,19 @@ namespace App\Repositories;
 
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+use App\Repositories\Contracts\UserRepositoryInterface;
 
-class UserRepository
+class UserRepository implements UserRepositoryInterface
 {
     /**
      * Trouve un utilisateur par téléphone
      */
     public function findByTelephone(string $telephone): ?User
     {
-        return User::where('telephone', $telephone)->first();
+        return Cache::remember("user_telephone_{$telephone}", 3600, function () use ($telephone) {
+            return User::where('telephone', $telephone)->first();
+        });
     }
 
     /**

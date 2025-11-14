@@ -6,8 +6,9 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Database\Eloquent\Model;
+use App\Repositories\Contracts\TransferRepositoryInterface;
 
-class TransferRepository extends BaseRepository
+class TransferRepository extends BaseRepository implements TransferRepositoryInterface
 {
     public function __construct(Transaction $model)
     {
