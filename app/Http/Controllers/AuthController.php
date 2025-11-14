@@ -386,12 +386,19 @@ class AuthController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/auth/me",
+     *     path="/auth/me/{numeroCompte}",
      *     summary="Obtenir les informations complètes de l'utilisateur connecté",
-     *     description="Récupère les informations du profil, comptes et historique des transactions de l'utilisateur authentifié",
+     *     description="Récupère les informations du profil, comptes et historique des transactions. Par défaut, l'historique provient du compte principal. Spécifiez un numeroCompte pour filtrer par compte spécifique.",
      *     operationId="me",
      *     tags={"Authentication"},
      *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="numeroCompte",
+     *         in="path",
+     *         required=false,
+     *         description="Numéro du compte pour filtrer l'historique (format: Principal{timestamp} ou Secondaire{timestamp}). Si non spécifié, utilise le compte principal.",
+     *         @OA\Schema(type="string", example="Principal1731580000")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Informations utilisateur récupérées",
@@ -401,7 +408,7 @@ class AuthController extends Controller
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="user", ref="#/components/schemas/User"),
      *                 @OA\Property(property="comptes", type="array", description="Liste des comptes de l'utilisateur"),
-     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions")
+     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions du compte spécifié ou principal")
      *             )
      *         )
      *     ),
@@ -411,10 +418,17 @@ class AuthController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string", example="Unauthenticated")
      *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Compte non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Compte non trouvé")
+     *         )
      *     )
      * )
      */
-    public function me()
+    public function me(string $numeroCompte = null)
     {
         $user = auth()->user();
 
@@ -440,15 +454,73 @@ class AuthController extends Controller
             ];
         }, $wallets);
 
+        // Déterminer le wallet pour l'historique
+        $targetWallet = null;
+        if ($numeroCompte) {
+            // Trouver le wallet spécifié
+            $targetWallet = $this->findWalletByNumeroCompte($numeroCompte, $user->id);
+            if (!$targetWallet) {
+                return $this->notFoundResponse('Compte non trouvé');
+            }
+        } else {
+            // Utiliser le wallet principal par défaut
+            foreach ($wallets as $wallet) {
+                if (isset($wallet['is_main']) && $wallet['is_main']) {
+                    $targetWallet = $walletRepository->find($wallet['id']);
+                    break;
+                }
+            }
+            // Si pas de wallet principal trouvé, prendre le premier
+            if (!$targetWallet && !empty($wallets)) {
+                $targetWallet = $walletRepository->find($wallets[0]['id']);
+            }
+        }
+
         // Récupérer l'historique des transactions
         $historyService = app(\App\Services\Contracts\HistoryServiceInterface::class);
-        $history = $historyService->getUserHistory($user->telephone, 1, 50); // Récupérer jusqu'à 50 transactions récentes
+        if ($targetWallet) {
+            $history = $historyService->getAccountHistory($user->telephone, $targetWallet->id, 1, 50);
+        } else {
+            // Aucun wallet trouvé, historique vide
+            $history = ['transactions' => []];
+        }
 
         return $this->successResponse([
             'user' => $user,
             'comptes' => $comptes,
             'historique_transactions' => \App\Http\Resources\TransactionHistoryResource::collection(collect($history['transactions']))
         ], 'Informations utilisateur récupérées');
+    }
+
+    /**
+     * Helper method to find wallet by numeroCompte (duplicated from ComptesController)
+     */
+    private function findWalletByNumeroCompte(string $numeroCompte, string $userId): ?object
+    {
+        // Vérifier si c'est un numéro de compte formaté (Principal/Secondaire + timestamp)
+        if (preg_match('/^(Principal|Secondaire)(\d+)$/', $numeroCompte, $matches)) {
+            $type = $matches[1] === 'Principal' ? true : false;
+            $timestamp = $matches[2];
+
+            // Trouver le wallet par user_id, is_main, et timestamp proche
+            $walletRepository = app(\App\Repositories\WalletRepository::class);
+            $wallets = $walletRepository->getUserWallets($userId);
+            foreach ($wallets as $w) {
+                $walletTimestamp = strtotime($w['created_at']);
+                if (($w['is_main'] ?? false) === $type && $walletTimestamp == $timestamp) {
+                    return $walletRepository->find($w['id']);
+                }
+            }
+        } else {
+            // Ancien format UUID
+            $walletRepository = app(\App\Repositories\WalletRepository::class);
+            $wallet = $walletRepository->find($numeroCompte);
+            if ($wallet && $wallet->user_id === $userId) {
+                return $wallet;
+            }
+        }
+
+        return null;
     }
 
 
