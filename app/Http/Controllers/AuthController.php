@@ -386,19 +386,12 @@ class AuthController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/auth/me/{numeroCompte}",
+     *     path="/auth/me",
      *     summary="Obtenir les informations complètes de l'utilisateur connecté",
-     *     description="Récupère les informations du profil, comptes et historique des transactions. Par défaut, l'historique provient du compte principal. Spécifiez un numeroCompte pour filtrer par compte spécifique.",
+     *     description="Récupère les informations du profil, tous les comptes avec leurs soldes et l'historique des transactions du compte principal.",
      *     operationId="me",
      *     tags={"Authentication"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="numeroCompte",
-     *         in="path",
-     *         required=false,
-     *         description="Numéro du compte pour filtrer l'historique (format: Principal{timestamp} ou Secondaire{timestamp}). Si non spécifié, utilise le compte principal.",
-     *         @OA\Schema(type="string", example="Principal1731580000")
-     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Informations utilisateur récupérées",
@@ -407,15 +400,15 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="Informations utilisateur récupérées"),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="user", ref="#/components/schemas/User"),
-     *                 @OA\Property(property="comptes", type="array", description="Liste des comptes de l'utilisateur",
+     *                 @OA\Property(property="comptes", type="array", description="Liste complète des comptes de l'utilisateur (principal et secondaires)",
      *                     @OA\Items(type="object",
      *                         @OA\Property(property="numero_compte", type="string", example="Principal1731580000"),
      *                         @OA\Property(property="solde", type="number", format="float", example=1947500),
      *                         @OA\Property(property="devise", type="string", example="XOF"),
-     *                         @OA\Property(property="type", type="string", example="principal")
+     *                         @OA\Property(property="type", type="string", enum={"principal", "secondaire"}, example="principal")
      *                     )
      *                 ),
-     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions du compte spécifié ou principal",
+     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions du compte principal",
      *                     @OA\Items(ref="#/components/schemas/Transaction")
      *                 )
      *             )
@@ -437,7 +430,7 @@ class AuthController extends Controller
      *     )
      * )
      */
-    public function me(string $numeroCompte = null)
+    public function me()
     {
         $user = auth()->user();
 
@@ -463,26 +456,17 @@ class AuthController extends Controller
             ];
         }, $wallets);
 
-        // Déterminer le wallet pour l'historique
+        // Utiliser le wallet principal pour l'historique
         $targetWallet = null;
-        if ($numeroCompte) {
-            // Trouver le wallet spécifié
-            $targetWallet = $this->findWalletByNumeroCompte($numeroCompte, $user->id);
-            if (!$targetWallet) {
-                return $this->notFoundResponse('Compte non trouvé');
+        foreach ($wallets as $wallet) {
+            if (isset($wallet['is_main']) && $wallet['is_main']) {
+                $targetWallet = $walletRepository->find($wallet['id']);
+                break;
             }
-        } else {
-            // Utiliser le wallet principal par défaut
-            foreach ($wallets as $wallet) {
-                if (isset($wallet['is_main']) && $wallet['is_main']) {
-                    $targetWallet = $walletRepository->find($wallet['id']);
-                    break;
-                }
-            }
-            // Si pas de wallet principal trouvé, prendre le premier
-            if (!$targetWallet && !empty($wallets)) {
-                $targetWallet = $walletRepository->find($wallets[0]['id']);
-            }
+        }
+        // Si pas de wallet principal trouvé, prendre le premier
+        if (!$targetWallet && !empty($wallets)) {
+            $targetWallet = $walletRepository->find($wallets[0]['id']);
         }
 
         // Récupérer l'historique des transactions
@@ -501,36 +485,6 @@ class AuthController extends Controller
         ], 'Informations utilisateur récupérées');
     }
 
-    /**
-     * Helper method to find wallet by numeroCompte (duplicated from ComptesController)
-     */
-    private function findWalletByNumeroCompte(string $numeroCompte, string $userId): ?object
-    {
-        // Vérifier si c'est un numéro de compte formaté (Principal/Secondaire + timestamp)
-        if (preg_match('/^(Principal|Secondaire)(\d+)$/', $numeroCompte, $matches)) {
-            $type = $matches[1] === 'Principal' ? true : false;
-            $timestamp = $matches[2];
-
-            // Trouver le wallet par user_id, is_main, et timestamp proche
-            $walletRepository = app(\App\Repositories\WalletRepository::class);
-            $wallets = $walletRepository->getUserWallets($userId);
-            foreach ($wallets as $w) {
-                $walletTimestamp = strtotime($w['created_at']);
-                if (($w['is_main'] ?? false) === $type && $walletTimestamp == $timestamp) {
-                    return $walletRepository->find($w['id']);
-                }
-            }
-        } else {
-            // Ancien format UUID
-            $walletRepository = app(\App\Repositories\WalletRepository::class);
-            $wallet = $walletRepository->find($numeroCompte);
-            if ($wallet && $wallet->user_id === $userId) {
-                return $wallet;
-            }
-        }
-
-        return null;
-    }
 
 
     /**

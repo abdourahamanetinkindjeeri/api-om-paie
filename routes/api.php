@@ -47,8 +47,8 @@ Route::middleware('throttle:10,1')->prefix('auth')->group(function () {
     // Déconnexion (protégée par Passport)
     Route::middleware('mongo.passport')->post('/logout', [AuthController::class, 'logout']);
 
-    // Récupérer l'utilisateur connecté (avec historique optionnel par compte)
-    Route::middleware('mongo.passport')->get('/me/{numeroCompte?}', [AuthController::class, 'me']);
+    // Récupérer l'utilisateur connecté (avec tous les comptes et historique du principal)
+    Route::middleware('mongo.passport')->get('/me', [AuthController::class, 'me']);
 });
 
 // Routes pour les transferts (protégées par authentification)
