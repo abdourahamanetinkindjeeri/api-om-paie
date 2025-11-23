@@ -588,26 +588,14 @@
                 }
             }
         },
-        "/auth/me/{numeroCompte}": {
+        "/auth/me": {
             "get": {
                 "tags": [
                     "Authentication"
                 ],
                 "summary": "Obtenir les informations complètes de l'utilisateur connecté",
-                "description": "Récupère les informations du profil, comptes et historique des transactions. Par défaut, l'historique provient du compte principal. Spécifiez un numeroCompte pour filtrer par compte spécifique.",
+                "description": "Récupère les informations du profil, tous les comptes avec leurs soldes et l'historique des transactions du compte principal.",
                 "operationId": "me",
-                "parameters": [
-                    {
-                        "name": "numeroCompte",
-                        "in": "path",
-                        "description": "Numéro du compte pour filtrer l'historique (format: Principal{timestamp} ou Secondaire{timestamp}). Si non spécifié, utilise le compte principal.",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "example": "Principal1731580000"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Informations utilisateur récupérées",

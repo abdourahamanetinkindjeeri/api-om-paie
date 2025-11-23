@@ -127,13 +127,18 @@ class QrCodeController extends Controller
                 'timestamp' => now()->toISOString()
             ];
 
+            // Format ultra-simplifié : seulement le numéro de téléphone
+            $qrString = $user->telephone;
+
             return response()->json([
                 'success' => true,
                 'message' => 'Données du QR code récupérées avec succès',
-                'data' => array_merge($qrData, [
-                    'qr_string' => json_encode($qrData)
-                ])
+                'data' => [
+                    'qr_data' => $qrData,
+                    'qr_string' => $qrString
+                ]
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -196,45 +201,116 @@ class QrCodeController extends Controller
                 'qr_data' => 'required|string'
             ]);
 
-            // Décoder les données du QR code
-            $qrData = json_decode($request->qr_data, true);
+            $qrData = $request->qr_data;
 
-            if (!$qrData || !isset($qrData['user_id']) || !isset($qrData['type'])) {
+            // Vérifier si c'est un numéro de téléphone sénégalais (+221XXXXXXXXX)
+            if (preg_match('/^\+221\d{9}$/', $qrData)) {
+                // Format ultra-simplifié : seulement le numéro de téléphone
+                $telephone = $qrData;
+
+                // Rechercher l'utilisateur par téléphone
+                $user = User::where('telephone', $telephone)->first();
+
+                if (!$user) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Utilisateur non trouvé'
+                    ], 404);
+                }
+
                 return response()->json([
-                    'success' => false,
-                    'message' => 'QR code invalide ou format incorrect'
-                ], 400);
+                    'success' => true,
+                    'message' => 'QR code décodé avec succès',
+                    'data' => [
+                        'user_id' => $user->id,
+                        'telephone' => $user->telephone,
+                        'nom_complet' => $user->prenom . ' ' . $user->nom,
+                        'type' => 'om_paie_user',
+                        'timestamp' => now()->toISOString()
+                    ],
+                    'user_info' => [
+                        'id' => $user->id,
+                        'nom' => $user->nom,
+                        'prenom' => $user->prenom,
+                        'telephone' => $user->telephone
+                    ]
+                ]);
             }
 
-            // Vérifier que c'est un QR code OM-Paie
-            if ($qrData['type'] !== 'om_paie_user') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'QR code non reconnu par OM-Paie'
-                ], 400);
+            // Vérifier l'ancien format OM_PAY:telephone:user_id
+            if (str_starts_with($qrData, 'OM_PAY:')) {
+                $parts = explode(':', $qrData);
+                if (count($parts) === 3) {
+                    $telephone = $parts[1];
+                    $userId = $parts[2];
+
+                    $user = User::where('telephone', $telephone)
+                               ->where('id', $userId)
+                               ->first();
+
+                    if (!$user) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Utilisateur non trouvé'
+                        ], 404);
+                    }
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'QR code décodé avec succès',
+                        'data' => [
+                            'user_id' => $user->id,
+                            'telephone' => $user->telephone,
+                            'nom_complet' => $user->prenom . ' ' . $user->nom,
+                            'type' => 'om_paie_user',
+                            'timestamp' => now()->toISOString()
+                        ],
+                        'user_info' => [
+                            'id' => $user->id,
+                            'nom' => $user->nom,
+                            'prenom' => $user->prenom,
+                            'telephone' => $user->telephone
+                        ]
+                    ]);
+                }
             }
 
-            // Rechercher l'utilisateur
-            $user = User::find($qrData['user_id']);
+            // Fallback: essayer l'ancien format JSON
+            $jsonData = json_decode($qrData, true);
+            if ($jsonData && isset($jsonData['user_id']) && isset($jsonData['type'])) {
+                if ($jsonData['type'] !== 'om_paie_user') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'QR code non reconnu par OM-Paie'
+                    ], 400);
+                }
 
-            if (!$user) {
+                $user = User::find($jsonData['user_id']);
+                if (!$user) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Utilisateur non trouvé'
+                    ], 404);
+                }
+
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Utilisateur non trouvé'
-                ], 404);
+                    'success' => true,
+                    'message' => 'QR code décodé avec succès',
+                    'data' => $jsonData,
+                    'user_info' => [
+                        'id' => $user->id,
+                        'nom' => $user->nom,
+                        'prenom' => $user->prenom,
+                        'telephone' => $user->telephone
+                    ]
+                ]);
             }
 
             return response()->json([
-                'success' => true,
-                'message' => 'QR code décodé avec succès',
-                'data' => $qrData,
-                'user_info' => [
-                    'id' => $user->id,
-                    'nom' => $user->nom,
-                    'prenom' => $user->prenom,
-                    'telephone' => $user->telephone
-                ]
-            ]);
+                'success' => false,
+                'message' => 'Format de QR code non reconnu'
+            ], 400);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

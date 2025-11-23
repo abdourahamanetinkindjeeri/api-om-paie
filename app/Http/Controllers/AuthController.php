@@ -386,19 +386,12 @@ class AuthController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/auth/me/{numeroCompte}",
+     *     path="/auth/me",
      *     summary="Obtenir les informations complètes de l'utilisateur connecté",
-     *     description="Récupère les informations du profil, comptes et historique des transactions. Par défaut, l'historique provient du compte principal. Spécifiez un numeroCompte pour filtrer par compte spécifique.",
+     *     description="Récupère les informations du profil, les comptes principaux avec leurs soldes et l'historique des transactions du compte principal.",
      *     operationId="me",
      *     tags={"Authentication"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="numeroCompte",
-     *         in="path",
-     *         required=false,
-     *         description="Numéro du compte pour filtrer l'historique (format: Principal{timestamp} ou Secondaire{timestamp}). Si non spécifié, utilise le compte principal.",
-     *         @OA\Schema(type="string", example="Principal1731580000")
-     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Informations utilisateur récupérées",
@@ -407,7 +400,7 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="Informations utilisateur récupérées"),
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="user", ref="#/components/schemas/User"),
-     *                 @OA\Property(property="comptes", type="array", description="Liste des comptes de l'utilisateur",
+     *                 @OA\Property(property="comptes", type="array", description="Liste des comptes principaux de l'utilisateur",
      *                     @OA\Items(type="object",
      *                         @OA\Property(property="numero_compte", type="string", example="Principal1731580000"),
      *                         @OA\Property(property="solde", type="number", format="float", example=1947500),
@@ -415,8 +408,18 @@ class AuthController extends Controller
      *                         @OA\Property(property="type", type="string", example="principal")
      *                     )
      *                 ),
-     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions du compte spécifié ou principal",
+     *                 @OA\Property(property="historique_transactions", type="array", description="Historique des transactions du compte principal",
      *                     @OA\Items(ref="#/components/schemas/Transaction")
+     *                 ),
+     *                 @OA\Property(property="qr_code", type="object", description="Données du QR code de l'utilisateur",
+     *                     @OA\Property(property="qr_data", type="object",
+     *                         @OA\Property(property="user_id", type="string", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                         @OA\Property(property="telephone", type="string", example="+221771234567"),
+     *                         @OA\Property(property="nom_complet", type="string", example="John Doe"),
+     *                         @OA\Property(property="type", type="string", example="om_paie_user"),
+     *                         @OA\Property(property="timestamp", type="string", format="date-time")
+     *                     ),
+     *                     @OA\Property(property="qr_string", type="string", example="+221771234567")
      *                 )
      *             )
      *         )
@@ -437,7 +440,7 @@ class AuthController extends Controller
      *     )
      * )
      */
-    public function me(string $numeroCompte = null)
+    public function me()
     {
         $user = auth()->user();
 
@@ -449,9 +452,12 @@ class AuthController extends Controller
         $walletRepository = app(\App\Repositories\WalletRepository::class);
         $wallets = $walletRepository->getUserWallets($user->id);
 
+        // Filtrer uniquement les comptes principaux
+        $mainWallets = array_filter($wallets, fn($w) => isset($w['is_main']) && $w['is_main']);
+
         $comptes = array_map(function ($wallet) {
-            $type = (isset($wallet['is_main']) && $wallet['is_main']) ? 'principal' : 'secondaire';
-            $prefix = $type === 'principal' ? 'Principal' : 'Secondaire';
+            $type = 'principal'; // Tous sont principaux maintenant
+            $prefix = 'Principal';
             $timestamp = strtotime($wallet['created_at']);
             $numero_compte = $prefix . $timestamp;
 
@@ -461,28 +467,12 @@ class AuthController extends Controller
                 'devise' => $wallet['currency'],
                 'type' => $type
             ];
-        }, $wallets);
+        }, $mainWallets);
 
-        // Déterminer le wallet pour l'historique
+        // Utiliser le premier wallet principal pour l'historique
         $targetWallet = null;
-        if ($numeroCompte) {
-            // Trouver le wallet spécifié
-            $targetWallet = $this->findWalletByNumeroCompte($numeroCompte, $user->id);
-            if (!$targetWallet) {
-                return $this->notFoundResponse('Compte non trouvé');
-            }
-        } else {
-            // Utiliser le wallet principal par défaut
-            foreach ($wallets as $wallet) {
-                if (isset($wallet['is_main']) && $wallet['is_main']) {
-                    $targetWallet = $walletRepository->find($wallet['id']);
-                    break;
-                }
-            }
-            // Si pas de wallet principal trouvé, prendre le premier
-            if (!$targetWallet && !empty($wallets)) {
-                $targetWallet = $walletRepository->find($wallets[0]['id']);
-            }
+        if (!empty($mainWallets)) {
+            $targetWallet = $walletRepository->find($mainWallets[0]['id']);
         }
 
         // Récupérer l'historique des transactions
@@ -494,43 +484,26 @@ class AuthController extends Controller
             $history = ['transactions' => []];
         }
 
+        // Générer les données du QR code - seulement le numéro de téléphone pour simplicité maximale
+        $qrString = $user->telephone;
+
         return $this->successResponse([
             'user' => $user,
             'comptes' => $comptes,
-            'historique_transactions' => \App\Http\Resources\TransactionHistoryResource::collection(collect($history['transactions']))
+            'historique_transactions' => \App\Http\Resources\TransactionHistoryResource::collection(collect($history['transactions'])),
+            'qr_code' => [
+                'qr_data' => [
+                    'user_id' => $user->id,
+                    'telephone' => $user->telephone,
+                    'nom_complet' => $user->prenom . ' ' . $user->nom,
+                    'type' => 'om_paie_user',
+                    'timestamp' => now()->toISOString()
+                ],
+                'qr_string' => $qrString
+            ]
         ], 'Informations utilisateur récupérées');
     }
 
-    /**
-     * Helper method to find wallet by numeroCompte (duplicated from ComptesController)
-     */
-    private function findWalletByNumeroCompte(string $numeroCompte, string $userId): ?object
-    {
-        // Vérifier si c'est un numéro de compte formaté (Principal/Secondaire + timestamp)
-        if (preg_match('/^(Principal|Secondaire)(\d+)$/', $numeroCompte, $matches)) {
-            $type = $matches[1] === 'Principal' ? true : false;
-            $timestamp = $matches[2];
-
-            // Trouver le wallet par user_id, is_main, et timestamp proche
-            $walletRepository = app(\App\Repositories\WalletRepository::class);
-            $wallets = $walletRepository->getUserWallets($userId);
-            foreach ($wallets as $w) {
-                $walletTimestamp = strtotime($w['created_at']);
-                if (($w['is_main'] ?? false) === $type && $walletTimestamp == $timestamp) {
-                    return $walletRepository->find($w['id']);
-                }
-            }
-        } else {
-            // Ancien format UUID
-            $walletRepository = app(\App\Repositories\WalletRepository::class);
-            $wallet = $walletRepository->find($numeroCompte);
-            if ($wallet && $wallet->user_id === $userId) {
-                return $wallet;
-            }
-        }
-
-        return null;
-    }
 
 
     /**
