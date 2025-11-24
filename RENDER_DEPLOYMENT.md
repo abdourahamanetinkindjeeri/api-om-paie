@@ -11,6 +11,7 @@ https://tinkin-transfer.onrender.com
 ```
 APP_KEY=base64:... (généré automatiquement)
 MONGODB_URI=mongodb://mongo:TyUsJXCHYKEMcEzELakgMgjBMdjEFqfv@gondola.proxy.rlwy.net:14762
+PASSPORT_SECRET=ppWah2Ca3+81cTY9qvR7/yuQUmNjCH81eJRbDyd77ns=
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://tinkin-transfer.onrender.com
