@@ -52,7 +52,7 @@ return [
     |
     */
 
-    'secret' => env('PASSPORT_SECRET_KEY'),
+    'secret' => env('PASSPORT_SECRET'),
 
     /*
     |--------------------------------------------------------------------------
