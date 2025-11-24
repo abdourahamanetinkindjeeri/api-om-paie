@@ -9,7 +9,11 @@ chmod 777 /tmp/views 2>/dev/null || true
 # Permissions
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-# 1️⃣ Copier les clés OAuth depuis Render Secret Files
+
+############################################
+# 1️⃣ Copier les clés OAuth depuis Render (si dispo)
+############################################
+
 if [ -f /etc/secrets/oauth-private.key ]; then
     echo "📋 Copie de la clé privée OAuth..."
     cp /etc/secrets/oauth-private.key storage/oauth-private.key
@@ -22,25 +26,51 @@ if [ -f /etc/secrets/oauth-public.key ]; then
     chmod 644 storage/oauth-public.key
 fi
 
-# 2️⃣ Si aucune clé n’a été copiée → générer les clés Passport AVANT config:cache
+
+############################################
+# 2️⃣ Générer automatiquement les clés Passport si absentes
+############################################
+
 if [ ! -f storage/oauth-private.key ] || [ ! -f storage/oauth-public.key ]; then
-    echo "🔐 Génération des clés Passport (fallback)..."
+    echo "🔐 Aucune clé trouvée → Génération automatique de Passport..."
+
+    # Supprimer d’anciennes clés au cas où
+    rm -f storage/oauth-private.key storage/oauth-public.key 2>/dev/null || true
+
     php artisan passport:keys --force --no-interaction
+
+    # Remettre les bonnes permissions
+    chmod 600 storage/oauth-private.key
+    chmod 644 storage/oauth-public.key
+
+    echo "✅ Clés Passport générées avec succès."
+else
+    echo "🔑 Clés OAuth trouvées, aucune génération nécessaire."
 fi
 
+
+############################################
 # 3️⃣ Générer la clé APP si manquante
+############################################
+
 if [ -z "$APP_KEY" ]; then
-    echo "🔑 Génération de la clé d'application..."
+    echo "🔑 APP_KEY absente → génération..."
     php artisan key:generate --force --no-interaction
 fi
 
-# 4️⃣ Maintenant on peut mettre en cache la config
-echo "⚡ Configuration rapide..."
+
+############################################
+# 4️⃣ Cache de configuration
+############################################
+
+echo "⚡ Optimisation de la configuration..."
 php artisan config:cache --no-interaction
 
-echo "✅ Application prête - démarrage du serveur..."
 
-# 🔄 Tâches en arrière-plan
+############################################
+# 5️⃣ Tâches en arrière-plan
+############################################
+
 (
     sleep 10
     echo "📚 Génération différée de la documentation..."
@@ -54,8 +84,14 @@ echo "✅ Application prête - démarrage du serveur..."
             echo "[QUEUE] $line"
         done &
     else
-        echo "⏭️ Queue en mode sync - worker non démarré"
+        echo "⏭️ Mode queue sync → worker non démarré"
     fi
 ) &
 
+
+############################################
+# 6️⃣ Démarrer l'application
+############################################
+
+echo "🚀 Lancement final..."
 exec "$@"
